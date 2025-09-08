@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "betkiray",
+    "slug": "betkiray",
+    "owner": "ukkuluuluu",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "betkiray",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.betkiray.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.betkiray.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "googleWebClientId": "886367601075-omjiflkhkvpg4l4f3pb4d2oamfbf8bt6.apps.googleusercontent.com",
+      "googleIosClientId": "886367601075-p3o1qmqc6ejerl18h3elj7ogrm8i3ale.apps.googleusercontent.com",
+      "googleAndroidClientId": "886367601075-o3sef3htmcq5jugis6pmlk0vk28tnv6s.apps.googleusercontent.com",
+      "router": {},
+      "eas": {
+        "projectId": "75c2953f-aeef-491a-a4d7-07c451e5049f"
+      }
+    }
+  }
+}

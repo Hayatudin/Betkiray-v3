@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Socket.IO Test Client</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+  <h1>Socket.IO Test Client</h1>
+  <p>Open the developer console to see logs and send messages.</p>
+  <script>
+    // --- CLIENT A ---
+    const socketA = io("http://localhost:3000");
+    console.log("Client A: Attempting to connect...");
+
+    socketA.on("connect", () => {
+      console.log("Client A: CONNECTED with ID:", socketA.id);
+      
+      // 1. Join the chat room
+      console.log("Client A: Emitting 'joinChat' for chatId 1...");
+      socketA.emit("joinChat", 1); // The '1' is the chatId
+    });
+
+    socketA.on("joinedChat", (data) => {
+      console.log("Client A: Received confirmation:", data);
+    });
+    
+    // --- CLIENT B ---
+    const socketB = io("http://localhost:3000");
+    console.log("Client B: Attempting to connect...");
+
+    socketB.on("connect", () => {
+      console.log("Client B: CONNECTED with ID:", socketB.id);
+      
+      // 1. Join the chat room
+      console.log("Client B: Emitting 'joinChat' for chatId 1...");
+      socketB.emit("joinChat", 1);
+    });
+
+    socketB.on("joinedChat", (data) => {
+      console.log("Client B: Received confirmation:", data);
+    });
+
+    // 2. Listen for incoming messages on BOTH clients
+    socketA.on("receiveMessage", (message) => {
+      console.log("Client A: <<< MESSAGE RECEIVED:", message);
+    });
+    
+    socketB.on("receiveMessage", (message) => {
+      console.log("Client B: <<< MESSAGE RECEIVED:", message);
+    });
+
+    // 3. Function to send a message (you will call this from the console)
+    function sendMessageFromA() {
+      const payload = {
+        chatId: 1,
+        senderId: 1, // Assuming user 1 is sending
+        content: "This message is from Client A!"
+      };
+      console.log("Client A: >>> SENDING MESSAGE:", payload);
+      socketA.emit("sendMessage", payload);
+    }
+  </script>
+</body>
+</html>
