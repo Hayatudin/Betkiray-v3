@@ -11,6 +11,7 @@ import "react-native-reanimated";
 import { AppStateProvider } from "@/contexts/AppStateContext";
 import { UserProvider } from "@/contexts/UserContext";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -26,24 +27,26 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <UserProvider>
-        <AppStateProvider>
-          <Stack>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding2" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding3" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding4" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="property/[id]"
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" />
-          </Stack>
-          <StatusBar style="auto" />
-        </AppStateProvider>
+        <NotificationProvider>
+          <AppStateProvider>
+            <Stack>
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+              <Stack.Screen name="onboarding2" options={{ headerShown: false }} />
+              <Stack.Screen name="onboarding3" options={{ headerShown: false }} />
+              <Stack.Screen name="onboarding4" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="property/[id]"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+            <StatusBar style="auto" />
+          </AppStateProvider>
+        </NotificationProvider>
       </UserProvider>
     </ThemeProvider>
   );

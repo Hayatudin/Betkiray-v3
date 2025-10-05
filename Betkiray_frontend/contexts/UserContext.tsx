@@ -73,9 +73,33 @@ export function UserProvider({ children }: { children: ReactNode }) {
     await handleAuthSuccess(response.data);
   };
   
+  // const signUpWithEmail = async (data: any) => {
+  //   await api.post('/auth/email/register', data);
+  //   await signInWithEmail({ email: data.email, password: data.password });
+  // };
+
   const signUpWithEmail = async (data: any) => {
-    await api.post('/auth/email/register', data);
-    await signInWithEmail({ email: data.email, password: data.password });
+    console.log("Attempting to sign up with data:", JSON.stringify(data)); // <-- ADD THIS LINE
+    try { // <-- ADD THIS LINE
+      await api.post('/auth/email/register', data);
+      await signInWithEmail({ email: data.email, password: data.password });
+    } catch (error: any) { // <-- ADD THIS LINE
+      console.error("--- SIGN UP API CALL FAILED ---"); // <-- ADD THIS LINE
+      if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          console.error("Error Response Data:", error.response.data);
+          console.error("Error Response Status:", error.response.status);
+      } else if (error.request) {
+          // The request was made but no response was received
+          console.error("Error Request: No response received. Check network/IP/firewall.", error.request);
+      } else {
+          // Something happened in setting up the request that triggered an Error
+          console.error('Error Message:', error.message);
+      }
+      // This re-throws the error so your UI can still catch it
+      throw error; // <-- ADD THIS LINE
+    }
   };
   
   const signInWithGoogle = async (idToken: string) => {

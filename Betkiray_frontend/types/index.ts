@@ -1,6 +1,5 @@
 // types/index.ts
 
-// The shape of the User data from your NestJS backend
 export interface UserData {
   isBanned: any;
   id: string;
@@ -11,37 +10,37 @@ export interface UserData {
   image?: string;
 }
 
-// The shape of a single Review
 export interface Review {
   id: number;
   rating: number;
   comment: string;
-  user: Pick<UserData, 'id' | 'name' | 'image'>; // Only include public user info
+  user: Pick<UserData, 'id' | 'name' | 'image'>;
   createdAt: string;
 }
 
-// The shape of the Property data returned from your backend
 export type Property = {
   [x: string]: any;
   id: number;
   title: string;
   description: string;
-  location: string;
+  address: string; 
+  location: string; 
   price: number;
   bedrooms: number;
-  areaSqm: number;
-  type: "House" | "Apartment" | "Office" | "Retail" | "Studio" | "Warehouse";
-  city: "Addis Ababa" | "Nairobi" | "Lagos";
-  billingPeriod: "Monthly" | "Yearly";
+  bathrooms: number;
+  areaSqm: number | null;
+  propertyType: "HOUSE" | "APARTMENT" | "OFFICE" | "RETAIL" | "STUDIO" | "WAREHOUSE";
+  city: "Addis Ababa" | "Nekemt" | "Jijiga" | "Hawassa" | "Shashemene" | "Arba Minch" | "Hosaina" | "Jimma" | "Mekele";
+  billingPeriod: "DAILY" | "WEEKLY" | "MONTHLY";
+  isFurnished: boolean;
+  isNegotiable: boolean;
+  includeUtilities: boolean;
   
-  // Relational data that should be included from the backend
-  media: { mediaUrl: string }[];
+  media: { mediaUrl: string; mediaType: 'IMAGE' | 'AUDIO' }[];
   reviews: Review[];
   owner: UserData;
   
-  // Frontend-only derived property
   image: string; 
 };
 
-// Defines the available cities
-export type City = "Addis Ababa" | "Nairobi" | "Lagos";
+export type City = "Addis Ababa" | "Nekemt" | "Jijiga" | "Hawassa" | "Shashemene" | "Arba Minch" | "Hosaina" | "Jimma" | "Mekele";

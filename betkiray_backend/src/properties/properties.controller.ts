@@ -1,6 +1,6 @@
 import {
-    Controller, Get, Post, Body, Param, Req, // <-- Import Req
-    ParseIntPipe, UseGuards, Query, UseInterceptors, UploadedFiles, BadRequestException,
+    Controller, Get, Post, Param, Req,
+    ParseIntPipe, UseGuards, Query, UseInterceptors, BadRequestException,
     Patch,
     HttpCode,
     HttpStatus,
@@ -8,7 +8,6 @@ import {
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
-import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import type { User } from '@prisma/client';
 import { AuthGuard } from '@nestjs/passport';
 import { diskStorage } from 'multer';
@@ -22,7 +21,10 @@ export class PropertiesController {
 
     @UseGuards(AuthGuard('jwt'))
     @Post()
-    @UseInterceptors(FileFieldsInterceptor([{ name: 'images', maxCount: 3 }], {
+    @UseInterceptors(FileFieldsInterceptor([
+        { name: 'images', maxCount: 3 },
+        { name: 'audio', maxCount: 1 }
+    ], {
         storage: diskStorage({
             destination: './uploads',
             filename: (req, file, cb) => {
@@ -31,25 +33,19 @@ export class PropertiesController {
             },
         }),
     }))
-    // --- THIS IS THE FINAL, WORKING METHOD ---
-    // We inject the raw request object using @Req()
     async create(@Req() req: any) {
-        // Get the user, files, and body directly from the request object.
-        // This bypasses any decorator conflicts.
         const user = req.user as User;
-        const files = req.files as { images?: Express.Multer.File[] };
+        const files = req.files as { images?: Express.Multer.File[], audio?: Express.Multer.File[] };
         const body = req.body;
 
-        // Check for files first
         if (!files || !files.images || files.images.length !== 3) {
             throw new BadRequestException('Exactly 3 images are required.');
         }
         const images = files.images;
+        const audio = files.audio?.[0]; 
 
-        // 1. Manually create the DTO instance from the raw body
         const createPropertyDto = plainToInstance(CreatePropertyDto, {
             ...body,
-            // Manually convert data types
             latitude: parseFloat(body.latitude),
             longitude: parseFloat(body.longitude),
             price: parseInt(body.price, 10),
@@ -61,15 +57,13 @@ export class PropertiesController {
             includeUtilities: body.includeUtilities === 'true',
         });
         
-        // 2. Manually trigger validation
         const errors = await validate(createPropertyDto);
         if (errors.length > 0) {
-            const messages = errors.flatMap(error => error.constraints ? Object.values(error.constraints) : []);
+            const messages = errors.flatMap(error => Object.values(error.constraints || {}));
             throw new BadRequestException(messages);
         }
 
-        // 3. If validation passes, call the service
-        return this.propertiesService.create(createPropertyDto, user.id, images);
+        return this.propertiesService.create(createPropertyDto, user.id, images, audio);
     }
 
     @Get()
@@ -83,7 +77,7 @@ export class PropertiesController {
     }
 
     @Patch(':id/view')
-    @HttpCode(HttpStatus.OK) // Respond with 200 OK
+    @HttpCode(HttpStatus.OK)
     incrementView(@Param('id', ParseIntPipe) id: number) {
         return this.propertiesService.incrementViewCount(id);
     }

@@ -2,7 +2,7 @@
   "expo": {
     "name": "betkiray",
     "slug": "betkiray",
-    "owner": "ukkuluuluu",
+    "owner": "esayastesfaye",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -11,7 +11,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.betkiray.app"
+      "bundleIdentifier": "com.betkiray.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -47,7 +50,7 @@
       "googleAndroidClientId": "886367601075-o3sef3htmcq5jugis6pmlk0vk28tnv6s.apps.googleusercontent.com",
       "router": {},
       "eas": {
-        "projectId": "75c2953f-aeef-491a-a4d7-07c451e5049f"
+        "projectId": "fd490e21-d0b9-4ff3-b66d-bec3bd76b150"
       }
     }
   }

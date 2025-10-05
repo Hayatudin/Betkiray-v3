@@ -1,16 +1,17 @@
 // src/chat/chat.module.ts
-
 import { Module } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { ChatGateway } from './chat.gateway';
 import { ChatController } from './chat.controller';
 import { DatabaseModule } from 'src/database/database.module';
+import { NotificationsModule } from 'src/notifications/notifications.module';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, NotificationsModule, UsersModule],
   providers: [
-    ChatGateway, // The gateway needs to be here
-    ChatService,   // And the service it depends on must ALSO be here
+    ChatGateway,
+    ChatService,
   ],
   controllers: [ChatController],
 })

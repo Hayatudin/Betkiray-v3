@@ -1,0 +1,15 @@
+.git
+.combinerignore
+combined_output.txt
+.gitignore
+node_modules
+package-lock.json
+.env
+other-list.txt
+uploads
+generated
+dist
+.vscode
+assets
+.expo
+

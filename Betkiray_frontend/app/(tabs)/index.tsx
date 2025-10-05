@@ -22,7 +22,7 @@ import { Property } from "@/types";
 
 const { width } = Dimensions.get("window");
 
-const cities = ["Addis Ababa", "Nairobi", "Lagos"] as const;
+const cities = ["Addis Ababa", "Nekemt", "Jijiga", "Hawassa", "Shashemene", "Arba Minch", "Hosaina", "Jimma", "Mekele"] as const;
 
 export default function HomeScreen() {
   const { allProperties, isSaved, toggleSaved, isLoading, error } = useAppState();

@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { Alert } from 'react-native';
 import api from '@/config/api';
 import { useUser } from './UserContext';
-// --- CHANGE: Import types from the new types file ---
 import { City, Property } from '@/types/index';
 
 export type AppState = {
@@ -15,7 +14,6 @@ export type AppState = {
   toggleSaved: (id: number) => Promise<void>;
   addProperty: (formData: FormData) => Promise<Property>;
   getPropertyById: (id: number) => Property | undefined;
-  // getAllProperties: () => Property[];
   refetchProperties: () => void;
 };
 
@@ -40,17 +38,29 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await api.get('/properties');
       const allProps: Property[] = response.data;
-      const groupedByCity = allProps.reduce((acc, prop) => {
-        const city = prop.city;
+      
+      const processedProps = allProps.map(prop => {
+        const imageUrl = prop.media?.find(m => m.mediaType === 'IMAGE')?.mediaUrl 
+          ? `${API_BASE_URL}${prop.media.find(m => m.mediaType === 'IMAGE')?.mediaUrl}` 
+          : '';
+        
+        const location = [prop.address, prop.subCity, prop.city].filter(Boolean).join(', ');
+
+        return { ...prop, image: imageUrl, location };
+      });
+
+      const groupedByCity = processedProps.reduce((acc, prop) => {
+        const city = prop.city as City;
         if (!acc[city]) acc[city] = [];
-        const imageUrl = prop.media?.[0]?.mediaUrl ? `${API_BASE_URL}${prop.media[0].mediaUrl}` : '';
-        acc[city].push({ ...prop, image: imageUrl });
+        acc[city].push(prop);
         return acc;
       }, {} as Record<City, Property[]>);
+
       setPropertiesByCity(groupedByCity);
-    } catch (err) {
-      console.error("Failed to fetch properties:", err);
-      setError("Could not load properties. Please try again later.");
+
+    } catch (err: any) {
+      console.error("--- FETCH PROPERTIES FAILED ---", err); 
+      setError("Could not load properties. Please check your connection.");
     } finally {
       setIsLoading(false);
     }
@@ -59,10 +69,14 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const fetchSaved = async () => {
     try {
       const response = await api.get('/saved');
-      const saved = response.data.map((item: { property: { media: { mediaUrl: any; }[]; }; }) => ({
-        ...item.property,
-        image: item.property.media?.[0]?.mediaUrl ? `${API_BASE_URL}${item.property.media[0].mediaUrl}` : '',
-      }));
+      const saved = response.data.map((item: any) => {
+        const prop = item.property;
+        const imageUrl = prop.media?.find((m: any) => m.mediaType === 'IMAGE')?.mediaUrl
+          ? `${API_BASE_URL}${prop.media.find((m: any) => m.mediaType === 'IMAGE').mediaUrl}`
+          : '';
+        const location = [prop.address, prop.subCity, prop.city].filter(Boolean).join(', ');
+        return { ...prop, image: imageUrl, location };
+      });
       setSavedProperties(saved);
     } catch (err) {
       console.error("Failed to fetch saved properties:", err);
@@ -72,10 +86,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchProperties();
     if (token) {
-      console.log("User is authenticated, fetching saved properties...");
       fetchSaved();
     } else {
-      console.log("User is not authenticated, clearing saved properties.");
       setSavedProperties([]);
     }
   }, [token]);
@@ -101,14 +113,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const getAllProperties = () => Object.values(propertiesByCity).flat();
-  const getPropertyById = (id: number) => getAllProperties().find((p) => p.id === id);
+  const getPropertyById = (id: number) => allProperties.find((p) => p.id === id);
   
   const addProperty = async (formData: FormData) => {
     const response = await api.post<Property>('/properties', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
     await fetchProperties();
     return response.data;
@@ -125,7 +134,6 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       toggleSaved,
       addProperty,
       getPropertyById,
-      // getAllProperties,
       refetchProperties: fetchProperties,
     }),
     [propertiesByCity, allProperties, savedProperties, isLoading, error],

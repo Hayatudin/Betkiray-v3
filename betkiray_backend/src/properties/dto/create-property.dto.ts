@@ -1,5 +1,5 @@
 import { PropertyType, BillingPeriod } from "@prisma/client";
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsBoolean, IsEnum, Max, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, IsBoolean, IsEnum, Min, IsPhoneNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreatePropertyDto {
@@ -19,14 +19,23 @@ export class CreatePropertyDto {
   @IsNotEmpty()
   city: string;
 
-  // --- FIX IS HERE ---
+  @IsString()
+  @IsOptional()
+  subCity?: string;
+
+  @IsPhoneNumber() 
+  @IsNotEmpty()
+  phone: string;
+
   @Type(() => Number)
   @IsNumber()
   latitude: number;
 
+  @Type(() => Number)
   @IsNumber()
   longitude: number;
 
+  @Type(() => Number)
   @IsNumber()
   @Min(1)
   price: number;
@@ -36,29 +45,35 @@ export class CreatePropertyDto {
 
   @IsEnum(PropertyType)
   propertyType: PropertyType;
-
+  
+  @Type(() => Number)
   @IsNumber()
-  @Min(1)
+  @Min(0)
   bedrooms: number;
-
+  
+  @Type(() => Number)
   @IsNumber()
-  @Min(1)
+  @Min(0)
   bathrooms: number;
 
+  @Type(() => Number)
   @IsNumber()
   @IsOptional()
+  @Min(1)
   areaSqm?: number;
 
+  @Type(() => Boolean)
   @IsBoolean()
   @IsOptional()
   isFurnished?: boolean;
 
+  @Type(() => Boolean)
   @IsBoolean()
   @IsOptional()
   isNegotiable?: boolean;
 
-
-  @IsBoolean() // <-- ADD THIS BLOCK
+  @Type(() => Boolean)
+  @IsBoolean()
   @IsOptional()
   includeUtilities?: boolean;
 }

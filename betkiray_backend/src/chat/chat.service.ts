@@ -90,4 +90,14 @@ export class ChatService {
       },
     });
   }
+
+  // Get all participants for a specific chat
+  async getChatParticipants(chatId: string) {
+    return this.databaseService.chatParticipant.findMany({
+      where: { chatId },
+      select: {
+        userId: true, // We only need the user IDs
+      },
+    });
+  }
 }

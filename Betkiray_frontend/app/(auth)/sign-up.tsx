@@ -54,13 +54,17 @@ export default function SignUpScreen() {
   };
 
   const handleSignUp = async () => {
+    console.log("Sign Up button pressed. handleSignUp function started!"); 
     setError("");
     if (!fullName.trim() || !email.trim() || !password.trim()) {
+      console.log("Validation Failed: One or more fields are empty.");
       return setError("Please fill in all fields.");
     }
     if (password !== confirmPassword) {
+      console.log("Validation Failed: Passwords do not match."); 
       return setError("Passwords do not match.");
     }
+    console.log("Validation passed. Preparing to call API."); 
     setIsLoading(true);
     try {
       await signUpWithEmail({ name: fullName, email, password });
@@ -98,7 +102,7 @@ export default function SignUpScreen() {
           </View>
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
           <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.signUpButtonText}>Sign up</Text>}
+            {isLoading ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.signUpButtonText}>Signing up</Text>}
           </TouchableOpacity>
           <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>OR</Text><View style={styles.dividerLine} /></View>
           <TouchableOpacity style={styles.googleButton} onPress={onGooglePress} disabled={!request}>

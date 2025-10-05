@@ -13,6 +13,7 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { ChatModule } from './chat/chat.module';
 import { AdminModule } from './admin/admin.module';
 import { ProfileModule } from './profile/profile.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ProfileModule } from './profile/profile.module';
     ChatModule,
     AdminModule,
     ProfileModule,
+    NotificationsModule,
   ],
   providers: [],
 })

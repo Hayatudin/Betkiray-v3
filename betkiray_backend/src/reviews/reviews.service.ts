@@ -20,7 +20,7 @@ export class ReviewsService {
     // Check if the user has already reviewed this property
     const existingReview = await this.databaseService.review.findUnique({
       where: {
-        Review_user_id_property_id_key: {
+        Review_userId_propertyId_key: {
           userId,
           propertyId,
         },

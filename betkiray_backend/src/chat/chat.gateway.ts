@@ -11,47 +11,64 @@ import {
 import { Logger } from '@nestjs/common';
 import { Socket, Server } from 'socket.io';
 import { ChatService } from './chat.service';
+import { NotificationsService } from 'src/notifications/notifications.service';
+import { UsersService } from 'src/users/users.service';
 
-// We add a specific port and namespace for clarity, which is good practice.
 @WebSocketGateway({
   cors: {
-    origin: '*', // This tells Socket.IO to allow all origins, including 'null' from file://
+    origin: '*',
     methods: ['GET', 'POST'],
     credentials: true,
   },
 })
 export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly notificationsService: NotificationsService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @WebSocketServer() server: Server;
   private logger: Logger = new Logger('ChatGateway');
 
-  // --- Main handler for incoming messages ---
   @SubscribeMessage('sendMessage')
   async handleMessage(
-    // Use decorators for cleaner access to client and data
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { chatId: string; senderId: string; content: string },
   ): Promise<void> {
-    
-    this.logger.log(`[sendMessage] Client ${client.id} sent payload: ${JSON.stringify(payload)}`);
+    this.logger.log(`[sendMessage] Received payload: ${JSON.stringify(payload)}`);
 
     try {
       const { chatId, senderId, content } = payload;
       const message = await this.chatService.createMessage(chatId, senderId, content);
-      
+
       const roomName = `chat_${chatId}`;
       this.server.to(roomName).emit('receiveMessage', message);
-
       this.logger.log(`Broadcasted message to room: ${roomName}`);
+
+      const participants = await this.chatService.getChatParticipants(chatId);
+      const recipients = participants.filter(p => p.userId !== senderId);
+
+      for (const recipient of recipients) {
+        const recipientUser = await this.usersService.findById(recipient.userId);
+        if (recipientUser?.pushToken) {
+          this.logger.log(`Sending push notification to user ${recipient.userId}`);
+          await this.notificationsService.sendPushNotification(
+            recipientUser.pushToken,
+            `New message from ${message.sender.name}`,
+            message.content,
+            { chatId: chatId }
+          );
+        } else {
+          this.logger.log(`User ${recipient.userId} has no push token. No notification sent.`);
+        }
+      }
     } catch (error) {
       this.logger.error(`Failed to handle message: ${error.message}`, error.stack);
-      // Optional: emit an error back to the client
       client.emit('error', 'Failed to send message.');
     }
   }
 
-  // --- Handler for joining a chat room ---
   @SubscribeMessage('joinChat')
   handleJoinChat(
     @ConnectedSocket() client: Socket,
@@ -60,17 +77,13 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     const roomName = `chat_${chatId}`;
     client.join(roomName);
     this.logger.log(`Client ${client.id} joined room: ${roomName}`);
-    // Optional: emit a confirmation back to the client
-    client.emit('joinedChat', `Successfully joined room ${roomName}`);
   }
 
-  // --- Lifecycle Hooks ---
   afterInit(server: Server) {
     this.logger.log('WebSocket Gateway Initialized');
   }
 
   handleConnection(client: Socket) {
-    // The client ID is now correctly logged
     this.logger.log(`Client connected: ${client.id}`);
   }
 

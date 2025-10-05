@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Socket.IO Notification Test</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+  <h1>Socket.IO Notification Test</h1>
+  <p>Open the developer console to see logs.</p>
+  <p>To run the test, call <code>sendMessageFromUser1ToUser2()</code> in the console.</p>
+  <script>
+    // --- IMPORTANT: REPLACE THESE PLACEHOLDER IDs ---
+    // Use actual string IDs from your User and Chat tables.
+    const USER_1_ID = "cmf77qrox0000lqwl265c191y"; 
+    const USER_2_ID = "cmfjguv250000lqqt50wkvgje";
+    const CHAT_ID = "cmfjgvx600001lqqtlty8s4li";
+
+    console.log(`--- Test Setup ---`);
+    console.log(`User 1 (Sender): ${USER_1_ID}`);
+    console.log(`User 2 (Recipient): ${USER_2_ID}`);
+    console.log(`Chat ID: ${CHAT_ID}`);
+    console.log(`--------------------`);
+
+    const socketUser1 = io("http://localhost:3000");
+    console.log("User 1: Attempting to connect...");
+
+    socketUser1.on("connect", () => {
+      console.log("User 1: CONNECTED with socket ID:", socketUser1.id);
+      
+      console.log(`User 1: Emitting 'registerUser' with ID ${USER_1_ID}...`);
+      socketUser1.emit("registerUser", USER_1_ID);
+
+      console.log(`User 1: Emitting 'joinChat' for chat ID ${CHAT_ID}...`);
+      socketUser1.emit("joinChat", CHAT_ID);
+    });
+
+    socketUser1.on("notification", (data) => {
+      console.error("!!! TEST FAILED !!! User 1 (Sender) should not receive a notification. Data:", data);
+    });
+
+    socketUser1.on("receiveMessage", (message) => {
+        console.log("User 1: <<< CHAT MESSAGE RECEIVED:", message);
+    });
+
+    const socketUser2 = io("http://localhost:3000");
+    console.log("User 2: Attempting to connect...");
+
+    socketUser2.on("connect", () => {
+      console.log("User 2: CONNECTED with socket ID:", socketUser2.id);
+
+      console.log(`User 2: Emitting 'registerUser' with ID ${USER_2_ID}...`);
+      socketUser2.emit("registerUser", USER_2_ID);
+      
+      console.log(`User 2: Emitting 'joinChat' for chat ID ${CHAT_ID}...`);
+      socketUser2.emit("joinChat", CHAT_ID);
+    });
+
+    socketUser2.on("notification", (data) => {
+      console.log("✅✅✅ TEST PASSED ✅✅✅ User 2 (Recipient) received a notification!");
+      console.log("Notification Data:", data);
+    });
+
+    socketUser2.on("receiveMessage", (message) => {
+        console.log("User 2: <<< CHAT MESSAGE RECEIVED:", message);
+    });
+
+    function sendMessageFromUser1ToUser2() {
+      const payload = {
+        chatId: CHAT_ID,
+        senderId: USER_1_ID,
+        content: `Hello from User 1 at ${new Date().toLocaleTimeString()}`
+      };
+      console.log("User 1: >>> SENDING MESSAGE:", payload);
+      socketUser1.emit("sendMessage", payload);
+    }
+  </script>
+</body>
+</html>
