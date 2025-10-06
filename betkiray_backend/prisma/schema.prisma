@@ -46,6 +46,7 @@ model User {
   email     String   @unique
   password  String?
   image     String?
+  phone     String?
   role      Role     @default(USER)
   isBanned  Boolean  @default(false)
   pushToken String?  @unique

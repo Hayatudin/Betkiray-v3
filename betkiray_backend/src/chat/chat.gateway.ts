@@ -30,6 +30,22 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   @WebSocketServer() server: Server;
   private logger: Logger = new Logger('ChatGateway');
+  private userSocketMap = new Map<string, string>();
+
+  private emitOnlineUsers() {
+    const onlineUserIds = Array.from(this.userSocketMap.keys());
+    this.server.emit('onlineUsers', onlineUserIds);
+    this.logger.log(`Broadcasted online users: [${onlineUserIds.join(', ')}]`);
+  }
+
+  @SubscribeMessage('registerUser')
+  handleRegisterUser(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() userId: string,
+  ): void {
+    this.userSocketMap.set(userId, client.id);
+    this.emitOnlineUsers();
+  }
 
   @SubscribeMessage('sendMessage')
   async handleMessage(
@@ -37,18 +53,14 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @MessageBody() payload: { chatId: string; senderId: string; content: string },
   ): Promise<void> {
     this.logger.log(`[sendMessage] Received payload: ${JSON.stringify(payload)}`);
-
     try {
       const { chatId, senderId, content } = payload;
       const message = await this.chatService.createMessage(chatId, senderId, content);
-
       const roomName = `chat_${chatId}`;
       this.server.to(roomName).emit('receiveMessage', message);
       this.logger.log(`Broadcasted message to room: ${roomName}`);
-
       const participants = await this.chatService.getChatParticipants(chatId);
       const recipients = participants.filter(p => p.userId !== senderId);
-
       for (const recipient of recipients) {
         const recipientUser = await this.usersService.findById(recipient.userId);
         if (recipientUser?.pushToken) {
@@ -60,7 +72,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
             { chatId: chatId }
           );
         } else {
-          this.logger.log(`User ${recipient.userId} has no push token. No notification sent.`);
+          this.logger.log(`User ${recipient.userId} has no push token.`);
         }
       }
     } catch (error) {
@@ -85,9 +97,22 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
+    const onlineUserIds = Array.from(this.userSocketMap.keys());
+    client.emit('onlineUsers', onlineUserIds);
   }
 
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
+    let disconnectedUserId: string | null = null;
+    for (const [userId, socketId] of this.userSocketMap.entries()) {
+      if (socketId === client.id) {
+        disconnectedUserId = userId;
+        break;
+      }
+    }
+    if (disconnectedUserId) {
+      this.userSocketMap.delete(disconnectedUserId);
+      this.emitOnlineUsers();
+    }
   }
 }

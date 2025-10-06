@@ -20,7 +20,6 @@ export default function RootLayout() {
   });
 
   if (!loaded) {
-    // Async font loading only occurs in development.
     return null;
   }
 
@@ -37,11 +36,10 @@ export default function RootLayout() {
               <Stack.Screen name="onboarding4" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="property/[id]"
-                options={{ headerShown: false }}
-              />
+              <Stack.Screen name="property/[id]" options={{ headerShown: false }} />
               <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
+              <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
+              <Stack.Screen name="property/edit/[id]" options={{ headerShown: false }} />
               <Stack.Screen name="+not-found" />
             </Stack>
             <StatusBar style="auto" />

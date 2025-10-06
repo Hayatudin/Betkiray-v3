@@ -13,6 +13,7 @@ export type AppState = {
   isSaved: (id: number) => boolean;
   toggleSaved: (id: number) => Promise<void>;
   addProperty: (formData: FormData) => Promise<Property>;
+  deleteProperty: (id: number) => Promise<void>;
   getPropertyById: (id: number) => Property | undefined;
   refetchProperties: () => void;
 };
@@ -21,7 +22,7 @@ const AppStateContext = createContext<AppState | undefined>(undefined);
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [propertiesByCity, setPropertiesByCity] = useState<Record<City, Property[]>>({
-    'Addis Ababa': [], Nairobi: [], Lagos: [],
+    'Addis Ababa': [], Jimma: [], Lagos: [],
   });
   const [savedProperties, setSavedProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -95,46 +96,30 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const isSaved = (id: number) => savedProperties.some(p => p.id === id);
 
   const toggleSaved = async (id: number) => {
-    if (!token) {
-      Alert.alert("Please Log In", "You need to be logged in to save properties.");
-      return;
-    }
-    const wasSaved = isSaved(id);
+    if (!token) { Alert.alert("Please Log In", "You need to be logged in to save properties."); return; }
     try {
-      if (wasSaved) {
-        await api.delete(`/saved/${id}`);
-      } else {
-        await api.post(`/saved/${id}`);
-      }
+      isSaved(id) ? await api.delete(`/saved/${id}`) : await api.post(`/saved/${id}`);
       await fetchSaved();
-    } catch (err) {
-      console.error("Failed to toggle saved property:", err);
-      Alert.alert("Error", "Could not update your saved properties.");
-    }
+    } catch (err) { console.error("Failed to toggle saved property:", err); Alert.alert("Error", "Could not update saved properties."); }
   };
 
   const getPropertyById = (id: number) => allProperties.find((p) => p.id === id);
   
   const addProperty = async (formData: FormData) => {
-    const response = await api.post<Property>('/properties', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const response = await api.post<Property>('/properties', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
     await fetchProperties();
     return response.data;
+  };
+
+  const deleteProperty = async (id: number) => {
+    await api.delete(`/properties/${id}`);
+    await fetchProperties();
   };
   
   const value = useMemo(
     () => ({
-      propertiesByCity,
-      allProperties,
-      savedProperties,
-      isLoading,
-      error,
-      isSaved,
-      toggleSaved,
-      addProperty,
-      getPropertyById,
-      refetchProperties: fetchProperties,
+      propertiesByCity, allProperties, savedProperties, isLoading, error, isSaved, toggleSaved,
+      addProperty, deleteProperty, getPropertyById, refetchProperties: fetchProperties,
     }),
     [propertiesByCity, allProperties, savedProperties, isLoading, error],
   );

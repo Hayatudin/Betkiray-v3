@@ -1,5 +1,3 @@
-// Betkiray/app/(tabs)/index.tsx (Definitive Fix)
-
 import { useAppState } from "@/contexts/AppStateContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -23,6 +21,8 @@ import { Property } from "@/types";
 const { width } = Dimensions.get("window");
 
 const cities = ["Addis Ababa", "Nekemt", "Jijiga", "Hawassa", "Shashemene", "Arba Minch", "Hosaina", "Jimma", "Mekele"] as const;
+const addisAbabaSubCities = ["All", "Arada", "Bole", "Gullele", "Yeka", "Akaky Kaliti", "Kirkos", "Lideta", "Nifas Silk-Lafto", "Kolfe Keranio", "Lemi Kura"] as const;
+
 
 export default function HomeScreen() {
   const { allProperties, isSaved, toggleSaved, isLoading, error } = useAppState();
@@ -33,37 +33,42 @@ export default function HomeScreen() {
   const [selectedCity, setSelectedCity] = useState<(typeof cities)[number]>("Addis Ababa");
   const [locationDropdownVisible, setLocationDropdownVisible] = useState(false);
 
-  // --- GUARANTEED FIX #1: Generate categories directly from the loaded data ---
+  // --- NEW STATES FOR SUB-CITY FILTER ---
+  const [selectedSubCity, setSelectedSubCity] = useState<(typeof addisAbabaSubCities)[number]>("All");
+  const [subCityDropdownVisible, setSubCityDropdownVisible] = useState(false);
+
+
   const categories = useMemo(() => {
     if (!allProperties || allProperties.length === 0) return ["All"];
-    // This creates a list of unique, uppercase property types from your actual data
     const types = new Set(allProperties.map(p => p.propertyType.toUpperCase()).filter(Boolean));
     return ["All", ...Array.from(types)];
   }, [allProperties]);
 
-  // --- GUARANTEED FIX #2: A simplified and robust filtering logic ---
   const filteredProperties = useMemo(() => {
     let propertiesToFilter = allProperties || [];
 
     // 1. Filter by City
-    const cityFiltered = propertiesToFilter.filter(p => p.city === selectedCity);
+    let cityFiltered = propertiesToFilter.filter(p => p.city === selectedCity);
 
-    // 2. Filter by Category
+    // 2. Filter by Sub-City (if applicable)
+    if (selectedCity === "Addis Ababa" && selectedSubCity !== "All") {
+      cityFiltered = cityFiltered.filter(p => p.subCity === selectedSubCity);
+    }
+
+    // 3. Filter by Category
     const categoryFiltered = selectedCategory === "All"
-        ? cityFiltered // If 'All' is selected, skip this filter
+        ? cityFiltered
         : cityFiltered.filter(p => p.propertyType.toUpperCase() === selectedCategory.toUpperCase());
 
-    // 3. Filter by Search Query
+    // 4. Filter by Search Query
     if (!searchQuery.trim()) {
-      return categoryFiltered; // If no search, return the result
+      return categoryFiltered;
     }
-    const searchFiltered = categoryFiltered.filter(
+    return categoryFiltered.filter(
         p => p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
              p.location.toLowerCase().includes(searchQuery.toLowerCase())
     );
-
-    return searchFiltered;
-  }, [allProperties, selectedCity, selectedCategory, searchQuery]);
+  }, [allProperties, selectedCity, selectedSubCity, selectedCategory, searchQuery]);
 
   const API_BASE_URL = api.defaults.baseURL;
 
@@ -109,23 +114,47 @@ export default function HomeScreen() {
       <View style={styles.container}>
           <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
           <View style={styles.header}>
-              <TouchableOpacity style={styles.locationHeader} onPress={() => setLocationDropdownVisible(true)}>
-                  <Ionicons name="location-outline" size={20} color="#888888" />
-                  <Text style={styles.locationHeaderText}>{selectedCity}</Text>
-                  <Ionicons name="chevron-down-outline" size={16} color="#888888" />
-              </TouchableOpacity>
+              <View style={styles.locationContainer}>
+                <TouchableOpacity style={styles.locationHeader} onPress={() => setLocationDropdownVisible(true)}>
+                    <Ionicons name="location-outline" size={20} color="#888888" />
+                    <Text style={styles.locationHeaderText}>{selectedCity}</Text>
+                    <Ionicons name="chevron-down-outline" size={16} color="#888888" />
+                </TouchableOpacity>
+
+                {selectedCity === 'Addis Ababa' && (
+                  <TouchableOpacity style={[styles.locationHeader, styles.subCityHeader]} onPress={() => setSubCityDropdownVisible(true)}>
+                    <Text style={styles.locationHeaderText}>{selectedSubCity}</Text>
+                    <Ionicons name="chevron-down-outline" size={16} color="#888888" />
+                  </TouchableOpacity>
+                )}
+              </View>
               <TouchableOpacity style={styles.searchButton} onPress={() => setSearchVisible(true)}>
                   <Ionicons name="search-outline" size={20} color="#888888" />
               </TouchableOpacity>
           </View>
+          
           <Modal visible={locationDropdownVisible} animationType="fade" transparent={true} onRequestClose={() => setLocationDropdownVisible(false)}>
               <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPressOut={() => setLocationDropdownVisible(false)}>
                   <View style={styles.locationDropdown}>
                       <Text style={styles.dropdownTitle}>Select a City</Text>
-                      {cities.map((city) => (<TouchableOpacity key={city} style={styles.locationOption} onPress={() => { setSelectedCity(city); setLocationDropdownVisible(false); setSelectedCategory("All"); }}><Text style={styles.locationOptionText}>{city}</Text></TouchableOpacity>))}
+                      {cities.map((city) => (<TouchableOpacity key={city} style={styles.locationOption} onPress={() => { setSelectedCity(city); setSelectedSubCity("All"); setLocationDropdownVisible(false); setSelectedCategory("All"); }}><Text style={styles.locationOptionText}>{city}</Text></TouchableOpacity>))}
                   </View>
               </TouchableOpacity>
           </Modal>
+
+          <Modal visible={subCityDropdownVisible} animationType="fade" transparent={true} onRequestClose={() => setSubCityDropdownVisible(false)}>
+            <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPressOut={() => setSubCityDropdownVisible(false)}>
+              <View style={styles.locationDropdown}>
+                <Text style={styles.dropdownTitle}>Select a Sub City</Text>
+                {addisAbabaSubCities.map((subCity) => (
+                  <TouchableOpacity key={subCity} style={styles.locationOption} onPress={() => { setSelectedSubCity(subCity); setSubCityDropdownVisible(false); }}>
+                    <Text style={styles.locationOptionText}>{subCity}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </TouchableOpacity>
+          </Modal>
+
           <Modal visible={searchVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSearchVisible(false)}>
               <View style={styles.searchModal}>
                   <View style={styles.searchHeader}>
@@ -165,7 +194,6 @@ export default function HomeScreen() {
   );
 }
 
-// Styles are unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -195,15 +223,26 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 20,
   },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   locationHeader: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  subCityHeader: {
+    backgroundColor: '#eef5ff',
   },
   locationHeaderText: {
     fontSize: 16,
     color: "#000000",
-    marginLeft: 8,
-    marginRight: 4,
+    marginHorizontal: 8,
     fontWeight: "500",
   },
   searchButton: {
@@ -391,6 +430,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     width: width * 0.8,
+    maxHeight: '60%',
     shadowColor: "#000",
     shadowOffset: {
       width: 0,

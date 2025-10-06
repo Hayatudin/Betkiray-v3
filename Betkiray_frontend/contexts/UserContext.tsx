@@ -18,9 +18,17 @@ interface UserContextType {
   signUpWithEmail: (data: any) => Promise<void>;
   signInWithGoogle: (idToken: string) => Promise<void>;
   signOut: () => void;
+  getProfile: (token: string) => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
+
+const processUserImage = (user: UserData): UserData => {
+  if (user.image && !user.image.startsWith('http')) {
+    return { ...user, image: `${api.defaults.baseURL}${user.image}` };
+  }
+  return user;
+};
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserData | null>(null);
@@ -39,7 +47,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
       const response = await api.get('/profile/me');
-      setUser(response.data);
+      const processedUser = processUserImage(response.data);
+      setUser(processedUser);
     } catch (error) {
       console.error("Failed to fetch profile, signing out.", error);
       await signOut();
@@ -60,11 +69,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [getProfile]);
 
   const handleAuthSuccess = async (data: AuthResponse) => {
-    const { accessToken, user } = data;
+    const { accessToken, user: apiUser } = data;
     await AsyncStorage.setItem('accessToken', accessToken);
     api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+    const processedUser = processUserImage(apiUser);
     setToken(accessToken);
-    setUser(user);
+    setUser(processedUser);
     router.replace('/(tabs)');
   };
 
@@ -73,32 +83,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     await handleAuthSuccess(response.data);
   };
   
-  // const signUpWithEmail = async (data: any) => {
-  //   await api.post('/auth/email/register', data);
-  //   await signInWithEmail({ email: data.email, password: data.password });
-  // };
-
   const signUpWithEmail = async (data: any) => {
-    console.log("Attempting to sign up with data:", JSON.stringify(data)); // <-- ADD THIS LINE
-    try { // <-- ADD THIS LINE
+    try {
       await api.post('/auth/email/register', data);
       await signInWithEmail({ email: data.email, password: data.password });
-    } catch (error: any) { // <-- ADD THIS LINE
-      console.error("--- SIGN UP API CALL FAILED ---"); // <-- ADD THIS LINE
-      if (error.response) {
-          // The request was made and the server responded with a status code
-          // that falls out of the range of 2xx
-          console.error("Error Response Data:", error.response.data);
-          console.error("Error Response Status:", error.response.status);
-      } else if (error.request) {
-          // The request was made but no response was received
-          console.error("Error Request: No response received. Check network/IP/firewall.", error.request);
-      } else {
-          // Something happened in setting up the request that triggered an Error
-          console.error('Error Message:', error.message);
-      }
-      // This re-throws the error so your UI can still catch it
-      throw error; // <-- ADD THIS LINE
+    } catch (error: any) {
+      console.error("--- SIGN UP API CALL FAILED ---", error.response?.data);
+      throw error;
     }
   };
   
@@ -107,13 +98,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const response = await api.post<AuthResponse>('/auth/google/login', { id_token: idToken });
       await handleAuthSuccess(response.data);
     } catch (error: any) {
-      console.error("!!! Google sign-in failed !!!", error.response?.data);
-      Alert.alert("Login Error", "Could not sign in with Google. Please try again.");
+      console.error("Google sign-in failed", error.response?.data);
+      Alert.alert("Login Error", "Could not sign in with Google.");
     }
   };
 
   return (
-    <UserContext.Provider value={{ user, token, isLoading, signInWithEmail, signUpWithEmail: signUpWithEmail, signInWithGoogle, signOut }}>
+    <UserContext.Provider value={{ user, token, isLoading, signInWithEmail, signUpWithEmail, signInWithGoogle, signOut, getProfile }}>
       {children}
     </UserContext.Provider>
   );
