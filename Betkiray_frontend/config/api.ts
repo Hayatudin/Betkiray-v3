@@ -7,17 +7,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // On Mac, go to System Settings > Wi-Fi > Details... and find the "IP Address".
 // Do NOT use 'localhost' or '127.0.0.1'.
 // const YOUR_LOCAL_IP = '192.168.43.13'; // <--- CHANGE THIS
-// const YOUR_LOCAL_IP = '192.168.19.235';
+// const YOUR_LOCAL_IP = '192.168.19.235'; 192.168.137.232
 // const YOUR_LOCAL_IP = '10.55.104.170';
 // const YOUR_LOCAL_IP = '10.21.180.170';
 // const YOUR_LOCAL_IP = '10.237.179.170'; 10.68.55.170
-// const YOUR_LOCAL_IP = '172.20.10.8';
+const YOUR_LOCAL_IP = '172.20.10.7';
 // const YOUR_LOCAL_IP =   '10.166.255.170';
-const YOUR_LOCAL_IP =   '10.68.55.170';
+// const YOUR_LOCAL_IP =   '10.68.55.170';
 // const YOUR_LOCAL_IP = '10.68.55.170';
 // const YOUR_LOCAL_IP = '10.201.0.170';
 // const YOUR_LOCAL_IP = '10.166.255.170';
-// 
+// const YOUR_LOCAL_IP = '192.168.137.232';
 
 const API_PORT = 3000;
 
