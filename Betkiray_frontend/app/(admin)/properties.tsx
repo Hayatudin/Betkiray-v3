@@ -1,20 +1,36 @@
 // app/(admin)/properties.tsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, Image } from 'react-native';
-import api from '@/config/api';
-import { Property } from '@/types'; // Using the global Property type
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  TouchableOpacity,
+  Alert,
+  Image,
+  ScrollView,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import api from "@/config/api";
+import { Property } from "@/types";
+
+type FilterType = "ALL" | "PENDING" | "APPROVED" | "REJECTED";
 
 export default function ManagePropertiesScreen() {
+  const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState<FilterType>("ALL");
 
   const fetchProperties = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await api.get('/admin/properties');
+      const response = await api.get("/admin/properties");
       setProperties(response.data);
     } catch (err) {
-      Alert.alert('Error', 'Failed to fetch properties.');
+      Alert.alert("Error", "Failed to fetch properties.");
     } finally {
       setIsLoading(false);
     }
@@ -36,7 +52,7 @@ export default function ManagePropertiesScreen() {
           onPress: async () => {
             try {
               await api.delete(`/admin/properties/${propertyId}`);
-              await fetchProperties(); // Refresh the list after deletion
+              await fetchProperties();
             } catch (error) {
               Alert.alert("Error", "Could not delete the property.");
             }
@@ -49,55 +65,202 @@ export default function ManagePropertiesScreen() {
   if (isLoading) {
     return <ActivityIndicator style={styles.centered} size="large" />;
   }
-  
+
   const API_BASE_URL = api.defaults.baseURL;
 
-  const renderPropertyItem = ({ item }: { item: Property }) => (
-    <View style={styles.card}>
-      <Image 
-        source={{ uri: `${API_BASE_URL}${item.media[0]?.mediaUrl}` }} 
-        style={styles.image} 
-      />
-      <View style={styles.info}>
-        <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
-        <Text style={styles.owner}>Listed by: {item.owner?.fullName || 'N/A'}</Text>
-      </View>
-      <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item.id)}>
-        <Text style={styles.deleteButtonText}>Delete</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const getFilteredProperties = () => {
+    if (filter === "ALL") return properties;
+    // Add filtering logic based on property status if available from backend
+    return properties;
+  };
+
+  const filteredProperties = getFilteredProperties();
 
   return (
-    <FlatList
-      data={properties}
-      renderItem={renderPropertyItem}
-      keyExtractor={(item) => item.id.toString()}
-      contentContainerStyle={styles.container}
-      ListHeaderComponent={<Text style={styles.headerTitle}>All Properties</Text>}
-      ListEmptyComponent={<Text style={styles.emptyText}>No properties found.</Text>}
-    />
+    <View style={styles.container}>
+      {/* Filter Tabs */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterContainer}
+      >
+        {(["ALL", "PENDING", "APPROVED", "REJECTED"] as FilterType[]).map(
+          (tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={[
+                styles.filterButton,
+                filter === tab && styles.filterButtonActive,
+              ]}
+              onPress={() => setFilter(tab)}
+            >
+              <Text
+                style={[
+                  styles.filterButtonText,
+                  filter === tab && styles.filterButtonTextActive,
+                ]}
+              >
+                {tab === "ALL"
+                  ? "All"
+                  : tab.charAt(0) + tab.slice(1).toLowerCase()}
+              </Text>
+            </TouchableOpacity>
+          )
+        )}
+      </ScrollView>
+
+      {/* Properties List */}
+      <ScrollView
+        style={styles.listContainer}
+        showsVerticalScrollIndicator={true}
+      >
+        {filteredProperties.length > 0 ? (
+          filteredProperties.map((item) => (
+            <View key={item.id.toString()} style={styles.card}>
+              <Image
+                source={{ uri: `${API_BASE_URL}${item.media[0]?.mediaUrl}` }}
+                style={styles.image}
+              />
+              <View style={styles.info}>
+                <Text style={styles.title} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.owner}>by {item.owner?.name || "N/A"}</Text>
+                <Text style={styles.price}>
+                  ETB {item.price.toLocaleString()} /
+                  {item.billingPeriod?.toLowerCase()}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.viewButton}
+                onPress={() => router.push(`/property/${item.id}`)}
+              >
+                <Text style={styles.viewButtonText}>View Details</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.emptyText}>No properties found.</Text>
+        )}
+      </ScrollView>
+
+      {/* Floating Action Button */}
+      <TouchableOpacity style={styles.fab}>
+        <Ionicons name="add" size={32} color="#fff" />
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, backgroundColor: '#f0f2f5' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
-  emptyText: { textAlign: 'center', marginTop: 50, color: '#666' },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    elevation: 1,
-    overflow: 'hidden',
+  container: {
+    flex: 1,
+    backgroundColor: "#f5f7fa",
   },
-  image: { width: 60, height: 60, backgroundColor: '#eee' },
-  info: { flex: 1, paddingHorizontal: 12 },
-  title: { fontSize: 16, fontWeight: '600' },
-  owner: { color: '#666', marginTop: 4, fontSize: 12 },
-  deleteButton: { backgroundColor: '#e74c3c', padding: 12, height: '100%', justifyContent: 'center' },
-  deleteButtonText: { color: '#fff', fontWeight: 'bold' },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  filterButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    marginRight: 12,
+    borderRadius: 20,
+    backgroundColor: "#f0f0f0",
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  filterButtonActive: {
+    backgroundColor: "#000",
+    borderColor: "#000",
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#666",
+    
+  },
+  filterButtonTextActive: {
+    color: "#fff",
+  },
+  listContainer: {
+    padding: 16,
+  },
+  emptyText: {
+    textAlign: "center",
+    marginTop: 50,
+    color: "#999",
+    fontSize: 14,
+  },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: "hidden",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  image: {
+    width: "100%",
+    height: 120,
+    backgroundColor: "#eee",
+  },
+  info: {
+    padding: 12,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000",
+  },
+  owner: {
+    color: "#999",
+    marginTop: 4,
+    fontSize: 12,
+  },
+  price: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#000",
+    marginTop: 6,
+  },
+  viewButton: {
+    backgroundColor: "#666",
+    padding: 12,
+    alignItems: "center",
+    marginHorizontal: 12,
+    marginBottom: 12,
+    borderRadius: 6,
+  },
+  viewButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  fab: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
 });
