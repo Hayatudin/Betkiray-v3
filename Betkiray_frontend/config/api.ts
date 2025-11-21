@@ -11,7 +11,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // const YOUR_LOCAL_IP = '10.55.104.170';
 // const YOUR_LOCAL_IP = '10.21.180.170';
 // const YOUR_LOCAL_IP = '10.237.179.170'; 10.68.55.170
-const YOUR_LOCAL_IP = "192.168.32.32";
+const YOUR_LOCAL_IP = "192.168.12.32";
 // const YOUR_LOCAL_IP =   '10.166.255.170';
 // const YOUR_LOCAL_IP =   '10.68.55.170';
 // const YOUR_LOCAL_IP = '10.68.55.170';

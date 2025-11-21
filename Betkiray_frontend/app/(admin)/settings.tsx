@@ -1,4 +1,4 @@
-// app/(admin)/feedback.tsx (Settings Page)
+// app/(admin)/settings.tsx (Settings Page)
 import React, { useState } from "react";
 import {
   View,
@@ -8,18 +8,8 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
-  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
-interface SettingOption {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  type: "toggle" | "select";
-  value?: boolean | string;
-}
 
 export default function SettingsScreen() {
   const [pushNotifications, setPushNotifications] = useState(true);
@@ -156,12 +146,42 @@ export default function SettingsScreen() {
               </Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.selectDropdown}>
+          <TouchableOpacity
+            style={styles.selectDropdown}
+            onPress={() => setShowReviewPeriodDropdown(true)}
+          >
             <Text style={styles.selectText}>{reviewPeriod}</Text>
             <Ionicons name="chevron-down" size={20} color="#666" />
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Review Period Dropdown Modal */}
+      <Modal
+        transparent={true}
+        visible={showReviewPeriodDropdown}
+        onRequestClose={() => setShowReviewPeriodDropdown(false)}
+      >
+        <TouchableOpacity
+          style={styles.dropdownOverlay}
+          onPress={() => setShowReviewPeriodDropdown(false)}
+        >
+          <View style={styles.dropdownMenu}>
+            {reviewPeriodOptions.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.dropdownOption}
+                onPress={() => {
+                  setReviewPeriod(option);
+                  setShowReviewPeriodDropdown(false);
+                }}
+              >
+                <Text style={styles.dropdownOptionText}>{option}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Save Button */}
       <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
