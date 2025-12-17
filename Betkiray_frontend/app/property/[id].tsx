@@ -25,7 +25,7 @@ import { Audio } from "expo-av";
 
 const { width, height } = Dimensions.get("window");
 const HEADER_MAX_HEIGHT = Math.round(height * 0.4);
-const HEADER_MIN_HEIGHT = 80;
+const HEADER_MIN_HEIGHT = 56; // Collapsed header height
 const HEADER_SCROLL_DISTANCE = HEADER_MAX_HEIGHT - HEADER_MIN_HEIGHT;
 
 type PropertyDetail = {
@@ -259,16 +259,50 @@ export default function PropertyDetailScreen() {
   }
 
   const isOwner = user?.id === property.owner.id;
-  const headerHeight = scrollY.interpolate({
+
+  // Header height stays fixed
+  const headerHeight = HEADER_MIN_HEIGHT;
+
+  // Image dimensions change based on scroll
+  const imageSize = scrollY.interpolate({
     inputRange: [0, HEADER_SCROLL_DISTANCE],
-    outputRange: [HEADER_MAX_HEIGHT, HEADER_MIN_HEIGHT],
+    outputRange: [HEADER_MAX_HEIGHT, 60], // Shrinks from full height to 60px thumbnail
     extrapolate: "clamp",
   });
-  const headerTranslateY = scrollY.interpolate({
+
+  // Image border radius: starts square (0), becomes circular
+  const imageBorderRadius = scrollY.interpolate({
     inputRange: [0, HEADER_SCROLL_DISTANCE],
-    outputRange: [0, -HEADER_SCROLL_DISTANCE],
+    outputRange: [0, 30],
     extrapolate: "clamp",
   });
+
+  // Image position - moves from center to left side
+  const imageLeft = scrollY.interpolate({
+    inputRange: [0, HEADER_SCROLL_DISTANCE],
+    outputRange: [0, 8], // Moves to left with 8px padding
+    extrapolate: "clamp",
+  });
+
+  const imageHeight = scrollY.interpolate({
+    inputRange: [0, HEADER_SCROLL_DISTANCE],
+    outputRange: [HEADER_MAX_HEIGHT, 60],
+    extrapolate: "clamp",
+  });
+
+  const imageWidth = scrollY.interpolate({
+    inputRange: [0, HEADER_SCROLL_DISTANCE],
+    outputRange: [width, 60], // width = full screen width
+    extrapolate: "clamp",
+  });
+
+  // Title opacity: invisible at top, visible when collapsed
+  const titleOpacity = scrollY.interpolate({
+    inputRange: [0, HEADER_SCROLL_DISTANCE / 2, HEADER_SCROLL_DISTANCE],
+    outputRange: [0, 0.5, 1],
+    extrapolate: "clamp",
+  });
+
   const propertyImages = property.media
     .filter((m) => m.mediaType === "IMAGE")
     .map((m) => `${API_BASE_URL}${m.mediaUrl}`);
@@ -283,44 +317,46 @@ export default function PropertyDetailScreen() {
         translucent
         backgroundColor="transparent"
       />
-      <Animated.View
-        style={[
-          styles.header,
-          {
-            height: headerHeight,
-            transform: [{ translateY: headerTranslateY }],
-          },
-        ]}
-      >
-        <FlatList
-          data={propertyImages}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(uri, idx) => `${uri}-${idx}`}
-          onMomentumScrollEnd={(e) =>
-            setActiveImageIndex(
-              Math.round(e.nativeEvent.contentOffset.x / width)
-            )
-          }
-          renderItem={({ item: uri }) => (
-            <View style={styles.carouselSlide}>
-              <Image
-                source={{ uri }}
-                style={styles.headerImage}
-                contentFit="cover"
-              />
-            </View>
-          )}
-        />
-        <View style={styles.carouselIndicators}>
-          {propertyImages.map((_, i) => (
-            <View
-              key={i}
-              style={[styles.dot, i === activeImageIndex && styles.activeDot]}
-            />
-          ))}
-        </View>
+
+      {/* Fixed Header */}
+      <View style={[styles.header, { height: headerHeight }]}>
+        {/* Fixed Image Container */}
+        <Animated.View
+          style={[
+            styles.fixedImageWrapper,
+            {
+              width: imageWidth,
+              height: imageHeight,
+              borderRadius: imageBorderRadius,
+              // left: imageLeft,
+            },
+          ]}
+        >
+          <FlatList
+            data={propertyImages}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(uri, idx) => `${uri}-${idx}`}
+            onMomentumScrollEnd={(e) =>
+              setActiveImageIndex(
+                Math.round(e.nativeEvent.contentOffset.x / width)
+              )
+            }
+            renderItem={({ item: uri }) => (
+              <View style={styles.carouselSlide}>
+                <Image
+                  source={{ uri }}
+                  style={styles.headerImage}
+                  contentFit="cover"
+                />
+              </View>
+            )}
+            scrollEnabled={false}
+          />
+        </Animated.View>
+
+        {/* Header Controls */}
         <View style={styles.headerControls}>
           <TouchableOpacity
             style={styles.headerButton}
@@ -339,16 +375,26 @@ export default function PropertyDetailScreen() {
             />
           </TouchableOpacity>
         </View>
-      </Animated.View>
+
+        {/* Collapsed Title */}
+        <Animated.View
+          style={[styles.collapsedTitleContainer, { opacity: titleOpacity }]}
+        >
+          <Text style={styles.collapsedTitle} numberOfLines={1}>
+            {property.title}
+          </Text>
+        </Animated.View>
+      </View>
 
       <Animated.ScrollView
         style={styles.contentContainer}
-        contentContainerStyle={{ paddingTop: HEADER_MAX_HEIGHT }} // Move paddingTop here
+        contentContainerStyle={{ paddingTop: HEADER_MAX_HEIGHT }}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
         )}
         scrollEventThrottle={16}
+        nestedScrollEnabled={true}
       >
         <View style={styles.propertyInfo}>
           <Text style={styles.propertyTitle}>{property.title}</Text>
@@ -628,11 +674,41 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: "#000000",
-    overflow: "hidden",
+    overflow: "visible",
     zIndex: 100,
     elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
-  carouselSlide: { width, height: HEADER_MAX_HEIGHT },
+  collapsedTitleContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 76,
+    right: 0,
+    height: HEADER_MIN_HEIGHT,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  collapsedTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#ffffff",
+  },
+  fixedImageWrapper: {
+    position: "absolute",
+    top: 0,
+    alignSelf: "center", // ✅ Add this
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  carouselSlide: {
+    width,
+    height: HEADER_MAX_HEIGHT,
+    overflow: "hidden",
+  },
   headerImage: { width: "100%", height: "100%" },
   headerControls: {
     position: "absolute",
@@ -651,31 +727,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  carouselIndicators: {
-    position: "absolute",
-    bottom: 12,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    gap: 6,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.5)",
-  },
-  activeDot: {
-    backgroundColor: "#ffffff",
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
   contentContainer: {
     flex: 1,
-    //paddingTop: HEADER_MAX_HEIGHT, // Use padding instead of margin
     backgroundColor: "#ffffff",
   },
   propertyInfo: { paddingHorizontal: 16, paddingTop: 16 },
