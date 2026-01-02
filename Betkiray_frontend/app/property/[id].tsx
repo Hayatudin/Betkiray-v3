@@ -18,10 +18,11 @@ import {
   Linking,
   Platform,
 } from "react-native";
-import MapView, { Marker } from "@/components/ui/MapView";
+
 import api from "@/config/api";
 import { useUser } from "@/contexts/UserContext";
 import { Audio } from "expo-av";
+import LeafletMapView from "@/components/ui/LeafletMapView";
 
 const { width, height } = Dimensions.get("window");
 const HEADER_MAX_HEIGHT = Math.round(height * 0.4);
@@ -457,25 +458,35 @@ export default function PropertyDetailScreen() {
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Location</Text>
                 <View style={styles.mapContainer}>
-                  <MapView
-                    style={StyleSheet.absoluteFill}
-                    mapType="satellite"
-                    initialRegion={{
-                      latitude: property.latitude,
-                      longitude: property.longitude,
-                      latitudeDelta: 0.01,
-                      longitudeDelta: 0.01,
-                    }}
-                  >
-                    <Marker
-                      coordinate={{
-                        latitude: property.latitude,
-                        longitude: property.longitude,
-                      }}
-                      title={property.title}
-                      description={property.address}
+                  <View style={{ height: 250, borderRadius: 12, overflow: 'hidden', marginBottom: 12, borderWidth: 1, borderColor: '#eee' }}>
+                    <LeafletMapView
+                      latitude={property.latitude}
+                      longitude={property.longitude}
+                      interactive={false}
                     />
-                  </MapView>
+                  </View>
+                  <View style={styles.staticMapPlaceholder}>
+                    <Text style={styles.staticMapText}>{property.address}</Text>
+                    <Text style={styles.staticMapSubText}>
+                      {property.city}{property.subCity ? `, ${property.subCity}` : ''}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.openMapsButton}
+                      onPress={() => {
+                        const scheme = Platform.select({ ios: 'maps:', android: 'geo:' });
+                        const latLng = `${property.latitude},${property.longitude}`;
+                        const label = property.title;
+                        const url = Platform.select({
+                          ios: `${scheme}?q=${label}&ll=${latLng}`,
+                          android: `${scheme}0,0?q=${latLng}(${label})`
+                        });
+                        if (url) Linking.openURL(url);
+                      }}
+                    >
+                      <Text style={styles.openMapsButtonText}>Open in Maps</Text>
+                      <Ionicons name="open-outline" size={16} color="#007AFF" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </View>
@@ -876,4 +887,39 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
   },
   submitReviewText: { color: "#fff", fontWeight: "600" },
+  staticMapPlaceholder: {
+    flex: 1,
+    backgroundColor: '#FAFBFD',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  staticMapText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0B0B0B',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  staticMapSubText: {
+    fontSize: 14,
+    color: '#6C6C6C',
+    marginTop: 4,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  openMapsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#EAF2FF',
+    borderRadius: 8,
+  },
+  openMapsButtonText: {
+    color: '#007AFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
 });

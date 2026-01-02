@@ -62,6 +62,42 @@ export default function ManagePropertiesScreen() {
     );
   };
 
+  const handleApprove = async (propertyId: number) => {
+    try {
+      await api.patch(`/admin/properties/${propertyId}/approve`);
+      Alert.alert("Success", "Property approved successfully!");
+      await fetchProperties();
+    } catch (error) {
+      Alert.alert("Error", "Could not approve the property.");
+    }
+  };
+
+  const handleReject = (propertyId: number) => {
+    Alert.prompt(
+      "Reject Property",
+      "Please provide a reason for rejection (optional):",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reject",
+          style: "destructive",
+          onPress: async (reason) => {
+            try {
+              await api.patch(`/admin/properties/${propertyId}/reject`, {
+                rejectionReason: reason || undefined,
+              });
+              Alert.alert("Success", "Property rejected successfully!");
+              await fetchProperties();
+            } catch (error) {
+              Alert.alert("Error", "Could not reject the property.");
+            }
+          },
+        },
+      ],
+      "plain-text"
+    );
+  };
+
   if (isLoading) {
     return <ActivityIndicator style={styles.centered} size="large" />;
   }
@@ -70,11 +106,23 @@ export default function ManagePropertiesScreen() {
 
   const getFilteredProperties = () => {
     if (filter === "ALL") return properties;
-    // Add filtering logic based on property status if available from backend
-    return properties;
+    return properties.filter((p) => p.approvalStatus === filter);
   };
 
   const filteredProperties = getFilteredProperties();
+
+  const getStatusBadgeStyle = (status: string) => {
+    switch (status) {
+      case "APPROVED":
+        return { backgroundColor: "#10b981", color: "#fff" };
+      case "PENDING":
+        return { backgroundColor: "#f59e0b", color: "#fff" };
+      case "REJECTED":
+        return { backgroundColor: "#ef4444", color: "#fff" };
+      default:
+        return { backgroundColor: "#6b7280", color: "#fff" };
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -122,21 +170,65 @@ export default function ManagePropertiesScreen() {
                 style={styles.image}
               />
               <View style={styles.info}>
-                <Text style={styles.title} numberOfLines={1}>
-                  {item.title}
-                </Text>
+                <View style={styles.headerRow}>
+                  <Text style={styles.title} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      getStatusBadgeStyle(item.approvalStatus),
+                    ]}
+                  >
+                    <Text style={styles.statusText}>
+                      {item.approvalStatus}
+                    </Text>
+                  </View>
+                </View>
                 <Text style={styles.owner}>by {item.owner?.name || "N/A"}</Text>
                 <Text style={styles.price}>
                   ETB {item.price.toLocaleString()} /
                   {item.billingPeriod?.toLowerCase()}
                 </Text>
+                {item.rejectionReason && (
+                  <View style={styles.rejectionReasonContainer}>
+                    <Text style={styles.rejectionReasonLabel}>
+                      Rejection Reason:
+                    </Text>
+                    <Text style={styles.rejectionReasonText}>
+                      {item.rejectionReason}
+                    </Text>
+                  </View>
+                )}
               </View>
-              <TouchableOpacity
-                style={styles.viewButton}
-                onPress={() => router.push(`/property/${item.id}`)}
-              >
-                <Text style={styles.viewButtonText}>View Details</Text>
-              </TouchableOpacity>
+
+              {/* Action Buttons */}
+              <View style={styles.actionButtons}>
+                {item.approvalStatus === "PENDING" && (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.approveButton]}
+                      onPress={() => handleApprove(item.id)}
+                    >
+                      <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                      <Text style={styles.actionButtonText}>Approve</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.rejectButton]}
+                      onPress={() => handleReject(item.id)}
+                    >
+                      <Ionicons name="close-circle" size={20} color="#fff" />
+                      <Text style={styles.actionButtonText}>Reject</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+                <TouchableOpacity
+                  style={styles.viewButton}
+                  onPress={() => router.push(`/property/${item.id}`)}
+                >
+                  <Text style={styles.viewButtonText}>View Details</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))
         ) : (
@@ -186,7 +278,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#666",
-    
+
   },
   filterButtonTextActive: {
     color: "#fff",
@@ -219,10 +311,28 @@ const styles = StyleSheet.create({
   info: {
     padding: 12,
   },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
   title: {
     fontSize: 16,
     fontWeight: "600",
     color: "#000",
+    flex: 1,
+    marginRight: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
   },
   owner: {
     color: "#999",
@@ -235,13 +345,55 @@ const styles = StyleSheet.create({
     color: "#000",
     marginTop: 6,
   },
+  rejectionReasonContainer: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: "#fef2f2",
+    borderRadius: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: "#ef4444",
+  },
+  rejectionReasonLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#991b1b",
+    marginBottom: 2,
+  },
+  rejectionReasonText: {
+    fontSize: 12,
+    color: "#7f1d1d",
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 8,
+    padding: 12,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 10,
+    borderRadius: 6,
+    gap: 6,
+  },
+  approveButton: {
+    backgroundColor: "#10b981",
+  },
+  rejectButton: {
+    backgroundColor: "#ef4444",
+  },
+  actionButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+  },
   viewButton: {
     backgroundColor: "#666",
     padding: 12,
     alignItems: "center",
-    marginHorizontal: 12,
-    marginBottom: 12,
     borderRadius: 6,
+    flex: 1,
   },
   viewButtonText: {
     color: "#fff",

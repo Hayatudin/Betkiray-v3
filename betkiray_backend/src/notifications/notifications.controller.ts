@@ -9,10 +9,15 @@ import { RegisterPushDto } from './dto/register-push.dto';
 @UseGuards(AuthGuard('jwt'))
 @Controller('notifications')
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(private readonly notificationsService: NotificationsService) { }
 
   @Post('register')
   register(@GetUser() user: User, @Body() registerPushDto: RegisterPushDto) {
     return this.notificationsService.registerPushToken(user.id, registerPushDto.token);
+  }
+
+  @Post('test')
+  test(@GetUser() user: User) {
+    return this.notificationsService.sendTestNotification(user.id);
   }
 }

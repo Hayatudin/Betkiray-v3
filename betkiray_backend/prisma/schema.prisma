@@ -27,6 +27,12 @@ enum PropertyType {
   WAREHOUSE
 }
 
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum MediaType {
   IMAGE
   AUDIO
@@ -96,9 +102,11 @@ model Property {
   areaSqm          Int?
   isFurnished      Boolean  @default(false)
   isNegotiable     Boolean  @default(false)
-  includeUtilities Boolean  @default(false)
-  viewCount        Int      @default(0)
-  createdAt        DateTime @default(now())
+  includeUtilities Boolean        @default(false)
+  viewCount        Int             @default(0)
+  approvalStatus   ApprovalStatus  @default(PENDING)
+  rejectionReason  String?
+  createdAt        DateTime        @default(now())
   ownerId          String
   owner            User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   media            PropertyMedia[]

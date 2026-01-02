@@ -13,35 +13,47 @@ import {
 import api from "@/config/api";
 import { useUser } from "@/contexts/UserContext";
 
+// Helper function to format numbers
+const formatNumber = (num: number): string => {
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1)}M`;
+  } else if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}K`;
+  }
+  return num.toString();
+};
+
 export default function AdminDashboardScreen() {
   const { user } = useUser();
   const [stats, setStats] = useState({
-    totalProperties: 248,
-    pendingApprovals: 15,
-    totalUsers: 1200,
-    monthlyEarnings: 5200,
+    totalProperties: 0,
+    pendingApprovals: 0,
+    totalUsers: 0,
+    monthlyEarnings: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch stats from backend
     const fetchStats = async () => {
       try {
-        // You can replace these with actual API calls
-        // const response = await api.get('/admin/stats');
-        // setStats(response.data);
-        setStats({
-          totalProperties: 248,
-          pendingApprovals: 15,
-          totalUsers: 1200,
-          monthlyEarnings: 5200,
-        });
+        setIsLoading(true);
+        // Use the dedicated stats endpoint instead of fetching all data
+        const response = await api.get('/admin/stats');
+        setStats(response.data);
       } catch (error) {
         console.error("Error fetching stats:", error);
+        // Fallback to 0s on error
+        setStats({
+          totalProperties: 0,
+          pendingApprovals: 0,
+          totalUsers: 0,
+          monthlyEarnings: 0,
+        });
       } finally {
         setIsLoading(false);
       }
     };
+
     fetchStats();
   }, []);
 
@@ -102,7 +114,7 @@ export default function AdminDashboardScreen() {
           </View>
           <Text style={styles.statPercentage}>+18%</Text>
           <Text style={styles.statNumber}>
-            {(stats.totalUsers / 1000).toFixed(1)}K
+            {formatNumber(stats.totalUsers)}
           </Text>
           <Text style={styles.statLabel}>Total Users</Text>
         </View>
@@ -114,7 +126,7 @@ export default function AdminDashboardScreen() {
           </View>
           <Text style={styles.statPercentage}>+8%</Text>
           <Text style={styles.statNumber}>
-            ${(stats.monthlyEarnings / 1000).toFixed(1)}K
+            ${formatNumber(stats.monthlyEarnings)}
           </Text>
           <Text style={styles.statLabel}>Monthly Earnings</Text>
         </View>

@@ -56,6 +56,37 @@ export default function MessagesScreen() {
           setOnlineUsers(users);
         });
 
+        // Listen for new messages and update the chat list
+        socket.on('receiveMessage', (message: { id: number; content: string; createdAt: string; senderId: string; chatId: string; }) => {
+          setChats((prevChats) => {
+            // Find the chat that this message belongs to
+            const chatIndex = prevChats.findIndex(chat => chat.id === message.chatId);
+
+            if (chatIndex !== -1) {
+              // Update the existing chat with the new message
+              const updatedChats = [...prevChats];
+              const updatedChat = { ...updatedChats[chatIndex] };
+
+              // Add the new message at the beginning (most recent first)
+              updatedChat.messages = [{
+                content: message.content,
+                createdAt: message.createdAt,
+                senderId: message.senderId
+              }, ...updatedChat.messages];
+
+              // Remove the chat from its current position
+              updatedChats.splice(chatIndex, 1);
+
+              // Add it to the top of the list
+              return [updatedChat, ...updatedChats];
+            }
+
+            // If chat not found, fetch chats again to get the new chat
+            fetchChats();
+            return prevChats;
+          });
+        });
+
         return () => {
           socket.disconnect();
           socketRef.current = null;

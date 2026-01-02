@@ -8,9 +8,9 @@ import * as path from 'path';
 
 @Injectable()
 export class PropertiesService {
-    constructor(private readonly databaseService: DatabaseService) {}
+    constructor(private readonly databaseService: DatabaseService) { }
 
-    async create( createPropertyDto: CreatePropertyDto, ownerId: string, images: Express.Multer.File[], audio?: Express.Multer.File) {
+    async create(createPropertyDto: CreatePropertyDto, ownerId: string, images: Express.Multer.File[], audio?: Express.Multer.File) {
         const { price, latitude, longitude, bedrooms, bathrooms, ...rest } = createPropertyDto;
         const mediaToCreate: { mediaType: MediaType, mediaUrl: string, sortOrder: number }[] = images.map((image, index) => ({ mediaType: MediaType.IMAGE, mediaUrl: `/uploads/${image.filename}`, sortOrder: index }));
         if (audio) { mediaToCreate.push({ mediaType: MediaType.AUDIO, mediaUrl: `/uploads/${audio.filename}`, sortOrder: 0 }); }
@@ -48,8 +48,20 @@ export class PropertiesService {
 
     async findAll(city?: string, type?: string) {
         return this.databaseService.property.findMany({
-            where: { city, propertyType: type ? { equals: type as any } : undefined },
+            where: {
+                city,
+                propertyType: type ? { equals: type as any } : undefined,
+                approvalStatus: 'APPROVED' // Only show approved properties to public
+            },
             include: { owner: { select: { name: true, email: true } }, media: true },
+        });
+    }
+
+    async findAllPending() {
+        return this.databaseService.property.findMany({
+            where: { approvalStatus: 'PENDING' },
+            include: { owner: { select: { name: true, email: true } }, media: true },
+            orderBy: { createdAt: 'desc' },
         });
     }
 

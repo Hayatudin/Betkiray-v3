@@ -11,12 +11,24 @@ import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(private readonly adminService: AdminService) { }
 
   @Get('users')
   @Roles(Role.ADMIN) // This endpoint now requires the ADMIN role
   getAllUsers() {
     return this.adminService.getAllUsers();
+  }
+
+  @Get('users/:id')
+  @Roles(Role.ADMIN)
+  getUserById(@Param('id') id: string) {
+    return this.adminService.getUserById(id);
+  }
+
+  @Get('stats')
+  @Roles(Role.ADMIN)
+  getStats() {
+    return this.adminService.getStats();
   }
 
   @Patch('users/:id/status')
@@ -34,11 +46,25 @@ export class AdminController {
     return this.adminService.getAllProperties();
   }
 
-  // --- AND ADD THIS ENDPOINT ---
-  @Delete('properties/:id')
+  @Get('properties/pending')
   @Roles(Role.ADMIN)
-  deleteProperty(@Param('id', ParseIntPipe) id: number) {
-    return this.adminService.deleteProperty(id);
+  getPendingProperties() {
+    return this.adminService.getPendingProperties();
+  }
+
+  @Patch('properties/:id/approve')
+  @Roles(Role.ADMIN)
+  approveProperty(@Param('id', ParseIntPipe) id: number) {
+    return this.adminService.approveProperty(id);
+  }
+
+  @Patch('properties/:id/reject')
+  @Roles(Role.ADMIN)
+  rejectProperty(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() rejectDto: { rejectionReason?: string },
+  ) {
+    return this.adminService.rejectProperty(id, rejectDto.rejectionReason);
   }
 
   @Get('feedback')

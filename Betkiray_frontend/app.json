@@ -2,7 +2,6 @@
   "expo": {
     "name": "betkiray",
     "slug": "betkiray",
-    "owner": "esayastesfaye",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -22,7 +21,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.betkiray.app"
+      "package": "com.betkiray.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -31,6 +31,7 @@
     },
     "plugins": [
       "expo-router",
+      "@react-native-google-signin/google-signin",
       [
         "expo-splash-screen",
         {
@@ -50,8 +51,9 @@
       "googleAndroidClientId": "886367601075-o3sef3htmcq5jugis6pmlk0vk28tnv6s.apps.googleusercontent.com",
       "router": {},
       "eas": {
-        "projectId": "fd490e21-d0b9-4ff3-b66d-bec3bd76b150"
+        "projectId": "f05f2ab2-0de2-4e50-947e-c75762f80d36"
       }
-    }
+    },
+    "owner": "bitsride"
   }
 }

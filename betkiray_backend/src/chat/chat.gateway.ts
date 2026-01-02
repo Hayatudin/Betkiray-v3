@@ -26,7 +26,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     private readonly chatService: ChatService,
     private readonly notificationsService: NotificationsService,
     private readonly usersService: UsersService,
-  ) {}
+  ) { }
 
   @WebSocketServer() server: Server;
   private logger: Logger = new Logger('ChatGateway');
@@ -63,6 +63,12 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       const recipients = participants.filter(p => p.userId !== senderId);
       for (const recipient of recipients) {
         const recipientUser = await this.usersService.findById(recipient.userId);
+        if (recipientUser) {
+          this.logger.log(`Found recipient user ${recipient.userId}. PushToken: ${recipientUser.pushToken || 'NULL'}`);
+        } else {
+          this.logger.warn(`Recipient user ${recipient.userId} NOT FOUND in DB.`);
+        }
+
         if (recipientUser?.pushToken) {
           this.logger.log(`Sending push notification to user ${recipient.userId}`);
           await this.notificationsService.sendPushNotification(

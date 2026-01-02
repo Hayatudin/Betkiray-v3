@@ -76,6 +76,16 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
+        name="feedback"
+        options={{
+          title: "Feedback",
+          tabBarLabel: "Feedback",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="chatbubbles" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: "Settings",

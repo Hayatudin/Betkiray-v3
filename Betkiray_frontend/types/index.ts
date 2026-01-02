@@ -6,7 +6,7 @@ export interface UserData {
   id: string;
   name: string;
   email: string;
-  role: 'USER' | 'ADMIN'; 
+  role: 'USER' | 'ADMIN';
   phone?: string;
   image?: string;
 }
@@ -37,15 +37,17 @@ export type Property = {
   propertyType: "HOUSE" | "APARTMENT" | "OFFICE" | "RETAIL" | "STUDIO" | "WAREHOUSE";
   city: "Addis Ababa" | "Nairobi" | "Lagos";
   billingPeriod: "DAILY" | "WEEKLY" | "MONTHLY";
-  
+  approvalStatus: "PENDING" | "APPROVED" | "REJECTED";
+  rejectionReason?: string | null;
+
   // Relational data that should be included from the backend
   media: { mediaUrl: string, mediaType: 'IMAGE' | 'AUDIO' }[];
   reviews: Review[];
   owner: UserData;
   ownerId: string;
-  
+
   // Frontend-only derived property
-  image: string; 
+  image: string;
 };
 
 // Defines the available cities

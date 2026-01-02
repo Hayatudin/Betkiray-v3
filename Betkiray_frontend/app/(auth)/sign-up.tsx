@@ -4,15 +4,9 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useUser } from "@/contexts/UserContext";
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import Constants from 'expo-constants';
-import { makeRedirectUri } from 'expo-auth-session'; // --- IMPORT THIS ---
-
-// This is required for the auth session to work on web
-if (Platform.OS === 'web') {
-  WebBrowser.maybeCompleteAuthSession();
-}
+// --- NATIVE GOOGLE SIGN IN ---
 
 export default function SignUpScreen() {
   const { signUpWithEmail, signInWithGoogle } = useUser();
@@ -23,48 +17,59 @@ export default function SignUpScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // --- THIS IS THE FIX ---
-  const redirectUri = makeRedirectUri({
-    scheme: 'betkiray',
-  });
-
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    webClientId: Constants.expoConfig?.extra?.googleWebClientId,
-    iosClientId: Constants.expoConfig?.extra?.googleIosClientId,
-    androidClientId: Constants.expoConfig?.extra?.googleAndroidClientId,
-    scopes: ['profile', 'email'],
-    redirectUri: redirectUri, // --- ADD THIS LINE ---
-  });
-
   useEffect(() => {
-    // ... (rest of the code is unchanged)
-    const handleGoogleSignUp = async () => {
-      if (response?.type === 'success') {
-        const { params } = response;
-        if (params.id_token) {
-          await signInWithGoogle(params.id_token);
-        }
-      }
-    };
-    handleGoogleSignUp();
-  }, [response]);
+    GoogleSignin.configure({
+      webClientId: Constants.expoConfig?.extra?.googleWebClientId,
+      offlineAccess: true,
+    });
+  }, []);
 
-  const onGooglePress = () => {
-    promptAsync();
+  const onGooglePress = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      // Force sign out to ensure account selector appears
+      try {
+        await GoogleSignin.signOut();
+      } catch (error) {
+        // Ignore error
+      }
+      const userInfo = await GoogleSignin.signIn();
+      console.log("Device Info", userInfo);
+
+      // Process ID Token
+      const token = userInfo.data?.idToken;
+      if (token) {
+        await signInWithGoogle(token);
+      } else {
+        setError('Google Sign-In failed: No ID token');
+      }
+
+    } catch (error: any) {
+      console.log('Google Sign-In Error', error);
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // user cancelled
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        // operation in progress
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        setError('Play Services not available');
+      } else {
+        setError(error.message || 'Google Sign-In failed');
+      }
+    }
   };
 
   const handleSignUp = async () => {
-    console.log("Sign Up button pressed. handleSignUp function started!"); 
+    console.log("Sign Up button pressed. handleSignUp function started!");
     setError("");
     if (!fullName.trim() || !email.trim() || !password.trim()) {
       console.log("Validation Failed: One or more fields are empty.");
       return setError("Please fill in all fields.");
     }
     if (password !== confirmPassword) {
-      console.log("Validation Failed: Passwords do not match."); 
+      console.log("Validation Failed: Passwords do not match.");
       return setError("Passwords do not match.");
     }
-    console.log("Validation passed. Preparing to call API."); 
+    console.log("Validation passed. Preparing to call API.");
     setIsLoading(true);
     try {
       await signUpWithEmail({ name: fullName, email, password });
@@ -85,19 +90,19 @@ export default function SignUpScreen() {
         </View>
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Ionicons name="person-outline" size={20} color="#888888" style={styles.inputIcon}/>
+            <Ionicons name="person-outline" size={20} color="#888888" style={styles.inputIcon} />
             <TextInput style={styles.input} placeholder="Full Name" value={fullName} onChangeText={setFullName} />
           </View>
           <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={20} color="#888888" style={styles.inputIcon}/>
+            <Ionicons name="mail-outline" size={20} color="#888888" style={styles.inputIcon} />
             <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
           </View>
           <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color="#888888" style={styles.inputIcon}/>
+            <Ionicons name="lock-closed-outline" size={20} color="#888888" style={styles.inputIcon} />
             <TextInput style={styles.input} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
           </View>
           <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color="#888888" style={styles.inputIcon}/>
+            <Ionicons name="lock-closed-outline" size={20} color="#888888" style={styles.inputIcon} />
             <TextInput style={styles.input} placeholder="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
           </View>
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -105,8 +110,8 @@ export default function SignUpScreen() {
             {isLoading ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.signUpButtonText}>Signing up</Text>}
           </TouchableOpacity>
           <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>OR</Text><View style={styles.dividerLine} /></View>
-          <TouchableOpacity style={styles.googleButton} onPress={onGooglePress} disabled={!request}>
-            <Image source={require("../../assets/images/google.png")} style={styles.googleIcon} contentFit="contain"/>
+          <TouchableOpacity style={styles.googleButton} onPress={onGooglePress}>
+            <Image source={require("../../assets/images/google.png")} style={styles.googleIcon} contentFit="contain" />
             <Text style={styles.googleButtonText}>Continue with Google</Text>
           </TouchableOpacity>
           <View style={styles.signInContainer}>

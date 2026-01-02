@@ -22,7 +22,7 @@ export default function ProfileScreen() {
   const [myProperties, setMyProperties] = useState<Property[]>([]);
   const [totalViews, setTotalViews] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   const API_BASE_URL = api.defaults.baseURL;
 
   const calculateStats = useCallback(() => {
@@ -33,11 +33,11 @@ export default function ProfileScreen() {
       setTotalViews(total);
     }
   }, [user, allProperties]);
-  
+
   useEffect(() => {
     calculateStats();
   }, [calculateStats]);
-  
+
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
     refetchProperties();
@@ -56,20 +56,24 @@ export default function ProfileScreen() {
       if (callback) callback();
     });
   };
-  
+
   const handleLogout = () => hideSettings(signOut);
+
+
 
   const handleDeleteProperty = (propertyId: number) => {
     Alert.alert("Delete Property", "Are you sure you want to delete this listing permanently?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => {
-        try {
-          await deleteProperty(propertyId);
-          onRefresh();
-        } catch (error) {
-          Alert.alert("Error", "Could not delete property.");
+      {
+        text: "Delete", style: "destructive", onPress: async () => {
+          try {
+            await deleteProperty(propertyId);
+            onRefresh();
+          } catch (error) {
+            Alert.alert("Error", "Could not delete property.");
+          }
         }
-      }},
+      },
     ]);
   };
 
@@ -81,16 +85,16 @@ export default function ProfileScreen() {
         <Text style={styles.listingPrice}>${listing.price.toString()}/{listing.billingPeriod.toLowerCase()}</Text>
       </View>
       {isMyListing && (
-         <View style={styles.optionsContainer}>
-           <TouchableOpacity onPress={() => router.push(`/property/edit/${listing.id}`)} style={styles.optionButton}><Ionicons name="create-outline" size={20} color="#007AFF" /></TouchableOpacity>
-           <TouchableOpacity onPress={() => handleDeleteProperty(listing.id)} style={styles.optionButton}><Ionicons name="trash-outline" size={20} color="#FF3B30" /></TouchableOpacity>
+        <View style={styles.optionsContainer}>
+          <TouchableOpacity onPress={() => router.push(`/property/edit/${listing.id}`)} style={styles.optionButton}><Ionicons name="create-outline" size={20} color="#007AFF" /></TouchableOpacity>
+          <TouchableOpacity onPress={() => handleDeleteProperty(listing.id)} style={styles.optionButton}><Ionicons name="trash-outline" size={20} color="#FF3B30" /></TouchableOpacity>
         </View>
       )}
     </TouchableOpacity>
   );
 
   if (!user) {
-    return (<View style={styles.centerContent}><ActivityIndicator size="large" /><Text style={{marginTop: 10}}>Loading profile...</Text></View>)
+    return (<View style={styles.centerContent}><ActivityIndicator size="large" /><Text style={{ marginTop: 10 }}>Loading profile...</Text></View>)
   }
 
   return (
@@ -101,13 +105,13 @@ export default function ProfileScreen() {
         <View style={styles.profileSection}><View style={styles.avatarContainer}><Image source={{ uri: user.image || 'https://via.placeholder.com/100' }} style={styles.avatar} contentFit="cover" /></View><Text style={styles.userName}>{user.name}</Text><Text style={styles.userEmail}>{user.email}</Text><TouchableOpacity style={styles.editButton} onPress={() => router.push('/profile/edit')}><Ionicons name="create-outline" size={16} color="#000000" /><Text style={styles.editButtonText}>Edit Profile</Text></TouchableOpacity></View>
         <View style={styles.statsSection}><View style={styles.statItem}><Text style={styles.statNumber}>{isLoading ? '-' : myProperties.length}</Text><Text style={styles.statLabel}>Properties</Text></View><View style={styles.statItem}><Text style={styles.statNumber}>{isLoading ? '-' : totalViews}</Text><Text style={styles.statLabel}>Total Views</Text></View><View style={styles.statItem}><Text style={styles.statNumber}>{savedProperties.length}</Text><Text style={styles.statLabel}>Saved</Text></View></View>
         <View style={styles.tabsContainer}>{["My Listings", "Saved"].map((tab) => (<TouchableOpacity key={tab} style={[styles.tab, activeTab === tab && styles.activeTab]} onPress={() => setActiveTab(tab)}><Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text></TouchableOpacity>))}</View>
-        <View style={styles.tabContent}>{activeTab === "My Listings" && (<View style={styles.listingsGrid}>{isLoading ? <ActivityIndicator/> : myProperties.length === 0 ? (<Text style={styles.emptyTabText}>You haven't listed any properties yet.</Text>) : (myProperties.map(prop => renderPropertyCard(prop, true)))}</View>)}{activeTab === "Saved" && (<View style={styles.listingsGrid}>{isLoading ? <ActivityIndicator/> : savedProperties.length === 0 ? (<Text style={styles.emptyTabText}>You haven't saved any properties yet.</Text>) : (savedProperties.map(prop => renderPropertyCard(prop, false)))}</View>)}</View>
+        <View style={styles.tabContent}>{activeTab === "My Listings" && (<View style={styles.listingsGrid}>{isLoading ? <ActivityIndicator /> : myProperties.length === 0 ? (<Text style={styles.emptyTabText}>You haven't listed any properties yet.</Text>) : (myProperties.map(prop => renderPropertyCard(prop, true)))}</View>)}{activeTab === "Saved" && (<View style={styles.listingsGrid}>{isLoading ? <ActivityIndicator /> : savedProperties.length === 0 ? (<Text style={styles.emptyTabText}>You haven't saved any properties yet.</Text>) : (savedProperties.map(prop => renderPropertyCard(prop, false)))}</View>)}</View>
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
       <Modal visible={settingsVisible} transparent={true} animationType="none" onRequestClose={() => hideSettings()}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => hideSettings()}>
-          <Animated.View style={[ styles.settingsModal, { transform: [{ translateY: slideAnim }] } ]}>
+          <Animated.View style={[styles.settingsModal, { transform: [{ translateY: slideAnim }] }]}>
             <TouchableOpacity activeOpacity={1}>
               <View style={styles.modalHandle} /><Text style={styles.modalTitle}>Settings</Text>
               <View style={styles.settingsOptions}>

@@ -4,14 +4,10 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useUser } from "@/contexts/UserContext";
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import Constants from 'expo-constants';
-import { makeRedirectUri } from 'expo-auth-session'; // --- IMPORT THIS ---
 
-if (Platform.OS === 'web') {
-  WebBrowser.maybeCompleteAuthSession();
-}
+
 
 export default function SignInScreen() {
   const { signInWithEmail, signInWithGoogle } = useUser();
@@ -20,36 +16,44 @@ export default function SignInScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // --- THIS IS THE FIX ---
-  // We explicitly tell the hook to use the proxy redirect URI.
-  // This is necessary for devices without Google Play Services.
-  const redirectUri = makeRedirectUri({
-    scheme: 'betkiray',
-  });
-
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    webClientId: Constants.expoConfig?.extra?.googleWebClientId,
-    iosClientId: Constants.expoConfig?.extra?.googleIosClientId,
-    androidClientId: Constants.expoConfig?.extra?.googleAndroidClientId,
-    scopes: ['profile', 'email'],
-    redirectUri: redirectUri, // --- ADD THIS LINE ---
-  });
-
   useEffect(() => {
-    // ... (rest of the code is unchanged)
-    const handleGoogleResponse = async () => {
-      if (response?.type === 'success') {
-        const { params } = response;
-        if (params.id_token) {
-          await signInWithGoogle(params.id_token);
-        }
-      }
-    };
-    handleGoogleResponse();
-  }, [response]);
+    GoogleSignin.configure({
+      webClientId: Constants.expoConfig?.extra?.googleWebClientId,
+      offlineAccess: true,
+    });
+  }, []);
 
-  const onGooglePress = () => {
-    promptAsync();
+  const onGooglePress = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      // Force sign out to ensure account selector appears
+      try {
+        await GoogleSignin.signOut();
+      } catch (error) {
+        // Ignore error if user wasn't signed in
+      }
+      const userInfo = await GoogleSignin.signIn();
+      console.log("Device Info", userInfo);
+
+      if (userInfo.data?.idToken) {
+        await signInWithGoogle(userInfo.data.idToken);
+      } else {
+        console.log('No ID token found', userInfo);
+        setError('Google Sign-In failed: No ID token');
+      }
+
+    } catch (error: any) {
+      console.log('Google Sign-In Error', error);
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // user cancelled the login flow
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        // operation (e.g. sign in) is in progress already
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        setError('Play Services not available');
+      } else {
+        setError(error.message || 'Google Sign-In failed');
+      }
+    }
   };
 
   const handleSignIn = async () => {
@@ -62,7 +66,9 @@ export default function SignInScreen() {
     try {
       await signInWithEmail({ email, password });
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to sign in. Please check your credentials.");
+      const errorMessage = err.response?.data?.message || err.message || "Failed to sign in";
+      setError(`Error: ${errorMessage}`);
+      console.log("Sign In Error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +100,7 @@ export default function SignInScreen() {
             <Text style={styles.dividerText}>OR</Text>
             <View style={styles.dividerLine} />
           </View>
-          <TouchableOpacity style={styles.googleButton} onPress={onGooglePress} disabled={!request}>
+          <TouchableOpacity style={styles.googleButton} onPress={onGooglePress}>
             <Image source={require("../../assets/images/google.png")} style={styles.googleIcon} contentFit="contain" />
             <Text style={styles.googleButtonText}>Continue with Google</Text>
           </TouchableOpacity>
@@ -111,120 +117,120 @@ export default function SignInScreen() {
 }
 
 const styles = StyleSheet.create({
-      container: {
-flex: 1,
-backgroundColor: "#ffffff",
-},
-content: {
-flex: 1,
-paddingHorizontal: 32,
-justifyContent: "center",
-},
-header: {
-alignItems: "center",
-marginBottom: 60,
-},
-title: {
-fontSize: 32,
-fontWeight: "700",
-color: "#000000",
-marginBottom: 8,
-},
-subtitle: {
-fontSize: 16,
-color: "#888888",
-fontWeight: "400",
-},
-form: {
-width: "100%",
-},
-inputContainer: {
-flexDirection: "row",
-alignItems: "center",
-borderBottomWidth: 1,
-borderBottomColor: "#E0E0E0",
-marginBottom: 20, // Increased margin
-paddingBottom: 12,
-},
-inputIcon: {
-marginRight: 12,
-},
-input: {
-flex: 1,
-fontSize: 16,
-color: "#000000",
-},
-errorText: {
-color: 'red',
-textAlign: 'center',
-marginBottom: 10,
-},
-forgotPassword: {
-alignSelf: "flex-end",
-marginBottom: 32,
-},
-forgotPasswordText: {
-fontSize: 14,
-color: "#888888",
-},
-signInButton: {
-backgroundColor: "#000000",
-borderRadius: 12,
-paddingVertical: 18,
-alignItems: "center",
-marginBottom: 32,
-},
-signInButtonText: {
-fontSize: 18,
-fontWeight: "600",
-color: "#ffffff",
-},
-divider: {
-flexDirection: "row",
-alignItems: "center",
-marginBottom: 32,
-},
-dividerLine: {
-flex: 1,
-height: 1,
-backgroundColor: "#E0E0E0",
-},
-dividerText: {
-fontSize: 14,
-color: "#888888",
-marginHorizontal: 16,
-},
-googleButton: {
-flexDirection: "row",
-alignItems: "center",
-justifyContent: "center",
-borderWidth: 1,
-borderColor: "#E0E0E0",
-borderRadius: 12,
-paddingVertical: 18,
-marginBottom: 32,
-},
-googleIcon: {
-width: 20,
-height: 20,
-marginRight: 12,
-},
-googleButtonText: {
-fontSize: 16,
-color: "#888888",
-},
-signUpContainer: {
-flexDirection: "row",
-justifyContent: "center",
-alignItems: "center",
-},
-signUpText: {
-fontSize: 14,
-color: "#888888",
-},
-signUpLink: {
-fontSize: 14,
-color: "#000000",
-fontWeight: "600",
-},
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 32,
+    justifyContent: "center",
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 60,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#000000",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#888888",
+    fontWeight: "400",
+  },
+  form: {
+    width: "100%",
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0E0E0",
+    marginBottom: 20, // Increased margin
+    paddingBottom: 12,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: "#000000",
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  forgotPassword: {
+    alignSelf: "flex-end",
+    marginBottom: 32,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: "#888888",
+  },
+  signInButton: {
+    backgroundColor: "#000000",
+    borderRadius: 12,
+    paddingVertical: 18,
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  signInButtonText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#ffffff",
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#E0E0E0",
+  },
+  dividerText: {
+    fontSize: 14,
+    color: "#888888",
+    marginHorizontal: 16,
+  },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    borderRadius: 12,
+    paddingVertical: 18,
+    marginBottom: 32,
+  },
+  googleIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 12,
+  },
+  googleButtonText: {
+    fontSize: 16,
+    color: "#888888",
+  },
+  signUpContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  signUpText: {
+    fontSize: 14,
+    color: "#888888",
+  },
+  signUpLink: {
+    fontSize: 14,
+    color: "#000000",
+    fontWeight: "600",
+  },
 });
