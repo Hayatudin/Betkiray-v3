@@ -304,66 +304,14 @@ export default function AddScreen() {
 
 
               <View style={{ height: 400, borderRadius: 12, overflow: 'hidden', marginBottom: 12, borderWidth: 1, borderColor: '#eee' }}>
-                <WebView
-                  originWhitelist={['*']}
-                  source={{
-                    html: `
-                    <!DOCTYPE html>
-                    <html>
-                      <head>
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-                        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-                        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-                        <style>
-                          body { margin: 0; padding: 0; height: 100%; width: 100%; background-color: #f0f0f0; }
-                          #map { height: 100%; width: 100%; }
-                        </style>
-                      </head>
-                      <body>
-                        <div id="map"></div>
-                        <script>
-                          var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([${coords.lat}, ${coords.lng}], 16);
-                          
-                          // Satellite (Esri World Imagery)
-                          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                            attribution: 'Tiles &copy; Esri',
-                            maxZoom: 19
-                          }).addTo(map);
-
-                          // Labels Overlay
-                          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-                            maxZoom: 19
-                          }).addTo(map);
-
-                          var marker = L.marker([${coords.lat}, ${coords.lng}], { draggable: true }).addTo(map);
-
-                          map.on('click', function(e) {
-                            marker.setLatLng(e.latlng);
-                            window.ReactNativeWebView.postMessage(JSON.stringify({ lat: e.latlng.lat, lng: e.latlng.lng }));
-                          });
-
-                          marker.on('dragend', function(e) {
-                            var pos = marker.getLatLng();
-                            window.ReactNativeWebView.postMessage(JSON.stringify({ lat: pos.lat, lng: pos.lng }));
-                          });
-                          
-                          // Listen for updates from React Native
-                          document.addEventListener("message", function(event) {
-                             // Handle updates if needed
-                          });
-                        </script>
-                      </body>
-                    </html>
-                  `, baseUrl: 'https://openstreetmap.org'
+                <LeafletMapView
+                  latitude={coords.lat}
+                  longitude={coords.lng}
+                  interactive={true}
+                  onRegionChange={(lat, lng) => {
+                    setCoords({ lat, lng });
+                    fetchAddressFromCoords(lat, lng);
                   }}
-                  onMessage={(event) => {
-                    try {
-                      const data = JSON.parse(event.nativeEvent.data);
-                      setCoords({ lat: data.lat, lng: data.lng });
-                      fetchAddressFromCoords(data.lat, data.lng);
-                    } catch (e) { }
-                  }}
-                  style={{ flex: 1 }}
                 />
               </View>
 

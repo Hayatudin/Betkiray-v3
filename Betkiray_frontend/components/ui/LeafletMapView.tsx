@@ -1,29 +1,22 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, ActivityIndicator } from 'react-native';
+import React from 'react';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
-import * as FileSystem from 'expo-file-system';
 
 interface LeafletMapViewProps {
   latitude: number;
   longitude: number;
-  onLocationSelect?: (latitude: number, longitude: number) => void;
+  onRegionChange?: (lat: number, lng: number) => void;
   interactive?: boolean;
-  style?: any;
 }
 
-const LeafletMapView: React.FC<LeafletMapViewProps> = ({
+export default function LeafletMapView({
   latitude,
   longitude,
-  onLocationSelect,
-  interactive = true,
-  style,
-}) => {
-  const webViewRef = useRef<WebView>(null);
-  const [mapUri, setMapUri] = useState<string | null>(null);
-  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  onRegionChange,
+  interactive = false
+}: LeafletMapViewProps) {
 
-  // Generate the HTML with current implementation (Satellite + Labels)
-  const getHtml = () => `
+  const htmlContent = `
     <!DOCTYPE html>
     <html>
       <head>
@@ -31,147 +24,71 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <style>
-          body { margin: 0; padding: 0; height: 100%; width: 100%; background-color: #f0f0f0; }
-          #map { height: 100%; width: 100%; }
+          body { margin: 0; padding: 0; }
+          #map { height: 100vh; width: 100vw; }
+          .leaflet-control-attribution { font-size: 8px; opacity: 0.6; }
         </style>
       </head>
       <body>
         <div id="map"></div>
         <script>
-          var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([${latitude}, ${longitude}], 16);
+          var map = L.map('map', { zoomControl: false }).setView([${latitude}, ${longitude}], 16);
           
+          // 1. Satellite Base Layer (Esri World Imagery)
           L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri',
-            maxZoom: 19
+            maxZoom: 19,
+            attribution: 'Tiles &copy; Esri'
           }).addTo(map);
 
+          // 2. Labels Overlay (Street names on top)
           L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 19
+             maxZoom: 19
           }).addTo(map);
 
-          var marker = L.marker([${latitude}, ${longitude}], {
-            draggable: ${interactive}
+          // Marker setup
+          var marker = L.marker([${latitude}, ${longitude}], { 
+            draggable: ${interactive} 
           }).addTo(map);
 
-          window.updateMap = function(lat, lng) {
-            var newLatLng = new L.LatLng(lat, lng);
-            marker.setLatLng(newLatLng);
-            map.panTo(newLatLng);
-          };
-
-          if (${interactive}) {
+          ${interactive ? `
             map.on('click', function(e) {
               marker.setLatLng(e.latlng);
-              sendMessage(e.latlng.lat, e.latlng.lng);
+              window.ReactNativeWebView.postMessage(JSON.stringify({ lat: e.latlng.lat, lng: e.latlng.lng }));
             });
 
             marker.on('dragend', function(e) {
-              var position = marker.getLatLng();
-              sendMessage(position.lat, position.lng);
+              var pos = marker.getLatLng();
+              window.ReactNativeWebView.postMessage(JSON.stringify({ lat: pos.lat, lng: pos.lng }));
             });
-          }
-
-          function sendMessage(lat, lng) {
-             if (window.ReactNativeWebView) {
-               window.ReactNativeWebView.postMessage(JSON.stringify({
-                 type: 'locationSelected',
-                 latitude: lat,
-                 longitude: lng
-               }));
-             }
-          }
+          ` : ''}
         </script>
       </body>
     </html>
   `;
 
-  useEffect(() => {
-    const prepareMap = async () => {
-      try {
-        const html = getHtml();
-        const filename = 'map_v1.html';
-        const fileUri = FileSystem.cacheDirectory + filename;
-        await FileSystem.writeAsStringAsync(fileUri, html);
-        setMapUri(fileUri);
-      } catch (error) {
-        console.error('Error saving map HTML:', error);
-      }
-    };
-    prepareMap();
-  }, []);
-
-  // Update logic needs to check if WebView is ready
-  useEffect(() => {
-    if (isMapLoaded && webViewRef.current) {
-      const script = `
-        try {
-          if (window.updateMap) {
-            window.updateMap(${latitude}, ${longitude});
-          }
-        } catch(e) { console.error(e); }
-      `;
-      webViewRef.current.injectJavaScript(script);
-    }
-  }, [latitude, longitude, isMapLoaded]);
-
-  const handleMessage = (event: any) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'locationSelected' && onLocationSelect) {
-        onLocationSelect(data.latitude, data.longitude);
-      }
-    } catch (e) {
-      console.error('Error parsing map message', e);
-    }
-  };
-
-  if (!mapUri) {
-    return (
-      <View style={[styles.container, style, styles.loadingCenter]}>
-        <ActivityIndicator size="large" color="#FF5C5C" />
-      </View>
-    );
-  }
-
   return (
-    <View style={[styles.container, style]}>
+    <View style={styles.container}>
       <WebView
-        ref={webViewRef}
         originWhitelist={['*']}
-        source={{ uri: mapUri }}
-        allowFileAccess={true}
-        allowFileAccessFromFileURLs={true}
-        allowUniversalAccessFromFileURLs={true}
-        onMessage={handleMessage}
-        onLoadEnd={() => setIsMapLoaded(true)}
-        style={{ flex: 1, opacity: 0.99 }} // Opacity hack for Android
-        androidLayerType="software"
-        mixedContentMode="always"
+        source={{ html: htmlContent }}
+        style={styles.map}
+        scrollEnabled={false}
+        onMessage={(event) => {
+          if (onRegionChange) {
+            try {
+              const data = JSON.parse(event.nativeEvent.data);
+              onRegionChange(data.lat, data.lng);
+            } catch (e) { }
+          }
+        }}
+        startInLoadingState={true}
+        renderLoading={() => <ActivityIndicator style={StyleSheet.absoluteFill} size="small" />}
       />
-      {!isMapLoaded && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#FF5C5C" />
-        </View>
-      )}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: {
-    overflow: 'hidden',
-    backgroundColor: '#eee',
-  },
-  loadingCenter: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#eee',
-  },
+  container: { flex: 1, backgroundColor: '#f0f0f0' },
+  map: { flex: 1 },
 });
-
-export default LeafletMapView;
