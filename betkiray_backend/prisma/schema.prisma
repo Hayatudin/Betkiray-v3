@@ -1,0 +1,182 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+// ENUMS
+enum BillingPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum PropertyType {
+  HOUSE
+  APARTMENT
+  OFFICE
+  RETAIL
+  STUDIO
+  WAREHOUSE
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum MediaType {
+  IMAGE
+  AUDIO
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+
+// MODELS
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  password  String?
+  image     String?
+  phone     String?
+  role      Role     @default(USER)
+  isBanned  Boolean  @default(false)
+  pushToken String?  @unique
+
+  properties      Property[]
+  reviews         Review[]
+  savedProperties SavedProperty[]
+  sessions        Session[]
+  accounts        Account[]
+  sentMessages    Message[]         @relation("SentMessages")
+  chatParticipants ChatParticipant[]
+  feedback        Feedback[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id          String @id @default(cuid())
+  userId      String
+  provider    String
+  provider_id String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, provider_id])
+}
+
+model Property {
+  id               Int      @id @default(autoincrement())
+  title            String
+  description      String?
+  address          String
+  city             String
+  subCity          String?
+  phone            String
+  latitude         Float
+  longitude        Float
+  price            Decimal  @db.Decimal(12, 2)
+  billingPeriod    BillingPeriod
+  propertyType     PropertyType
+  bedrooms         Int
+  bathrooms        Int
+  areaSqm          Int?
+  isFurnished      Boolean  @default(false)
+  isNegotiable     Boolean  @default(false)
+  includeUtilities Boolean        @default(false)
+  viewCount        Int             @default(0)
+  approvalStatus   ApprovalStatus  @default(PENDING)
+  rejectionReason  String?
+  createdAt        DateTime        @default(now())
+  ownerId          String
+  owner            User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  media            PropertyMedia[]
+  reviews          Review[]
+  savedBy          SavedProperty[]
+}
+
+model PropertyMedia {
+  id         Int       @id @default(autoincrement())
+  mediaType  MediaType
+  mediaUrl   String
+  sortOrder  Int       @default(0)
+  propertyId Int
+  property   Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  propertyId Int
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId], name: "Review_userId_propertyId_key")
+}
+
+model SavedProperty {
+  createdAt  DateTime @default(now())
+  userId     String
+  propertyId Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@id([userId, propertyId])
+}
+
+model Chat {
+  id           String            @id @default(cuid())
+  createdAt    DateTime          @default(now())
+  participants ChatParticipant[]
+  messages     Message[]
+}
+
+model ChatParticipant {
+  chatId String
+  userId String
+  chat   Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([chatId, userId])
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+  chatId    String
+  senderId  String
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender    User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model Feedback {
+  id        Int      @id @default(autoincrement())
+  content   String
+  category  String
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
