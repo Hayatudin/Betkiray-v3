@@ -82,9 +82,10 @@ export default function PropertyDetailScreen() {
         {/* Top Image Slider Area */}
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: property.image || (images[0] && images[0].startsWith('http') ? images[0] : "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1053&q=80") }}
+            source={{ uri: (property.image && property.image.startsWith('http')) ? property.image : "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80" }}
             style={styles.mainImage}
             contentFit="cover"
+            transition={1000}
           />
           <LinearGradient colors={['rgba(0,0,0,0.4)', 'transparent']} style={styles.topGradient} />
 
@@ -198,7 +199,12 @@ export default function PropertyDetailScreen() {
       <BlurView intensity={90} tint="light" style={styles.bottomBar}>
         <View style={styles.bottomBarContent}>
           <View>
-            <Text style={styles.price}>{Number(property.price).toLocaleString()}/month</Text>
+            <Text style={styles.price}>
+              {property.price
+                ? Number(property.price.toString().replace(/[^0-9.]/g, '')).toLocaleString()
+                : "0"}
+              /month
+            </Text>
           </View>
           <TouchableOpacity style={styles.chatNowBtn}>
             <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
@@ -228,7 +234,8 @@ const styles = StyleSheet.create({
   imageContainer: {
     height: IMAGE_HEIGHT,
     width: width,
-    position: 'relative'
+    position: 'relative',
+    backgroundColor: '#f0f0f0' // Placeholder color
   },
   mainImage: {
     width: "100%",
