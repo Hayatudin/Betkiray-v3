@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import React, { useMemo, useRef, useState, useEffect } from "react";
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { BANNER_IMAGES } from '@/data/mockData';
 import {
   ActivityIndicator,
@@ -25,17 +26,28 @@ const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 48) / 2; // 2 columns with padding
 
 const cities = ["Addis Ababa", "Nekemt", "Jijiga", "Hawassa", "Shashemene", "Arba Minch", "Hosaina", "Jimma", "Mekele"] as const;
-const addisAbabaSubCities = ["All", "Arada", "Bole", "Gullele", "Yeka", "Akaky Kaliti", "Kirkos", "Lideta", "Nifas Silk-Lafto", "Kolfe Keranio", "Lemi Kura"] as const;
+const citySubCities: Record<string, readonly string[]> = {
+  "Addis Ababa": ["All", "Arada", "Bole", "Gullele", "Yeka", "Akaky Kaliti", "Kirkos", "Lideta", "Nifas Silk-Lafto", "Kolfe Keranio", "Lemi Kura"],
+  "Nekemt": ["All", "Center", "Market Area", "University Area"],
+  "Jijiga": ["All", "Kebelle 01", "Kebelle 02", "Kebelle 03"],
+  "Hawassa": ["All", "Tabor", "Piazza", "Industry Zone"],
+  "Shashemene": ["All", "Main Road", "Market"],
+  "Arba Minch": ["All", "Secha", "Sikela"],
+  "Hosaina": ["All", "Area 1", "Area 2"],
+  "Jimma": ["All", "Ginjo", "Mendera", "University"],
+  "Mekele": ["All", "Kedamay Weyane", "Adi Haki", "Quiha"]
+};
 
 // Category icons mapping
 const categoryIcons: { [key: string]: { name: string; library: 'ionicons' | 'material' } } = {
-  'ALL': { name: 'apps', library: 'ionicons' },
-  'HOUSE': { name: 'home', library: 'ionicons' },
-  'APARTMENT': { name: 'business', library: 'ionicons' },
-  'OFFICE': { name: 'briefcase', library: 'ionicons' },
-  'RETAIL': { name: 'storefront', library: 'ionicons' },
-  'STUDIO': { name: 'cube', library: 'ionicons' },
-  'WAREHOUSE': { name: 'archive', library: 'ionicons' },
+  'ALL': { name: 'grid-outline', library: 'ionicons' }, // Changed to grid-outline to match '4 squares' look better or apps
+  'HOUSE': { name: 'home-outline', library: 'ionicons' },
+  'APARTMENT': { name: 'business-outline', library: 'ionicons' },
+  'OFFICE': { name: 'briefcase-outline', library: 'ionicons' },
+  'MARKETPLACE': { name: 'storefront-outline', library: 'ionicons' },
+  'RETAIL': { name: 'storefront-outline', library: 'ionicons' },
+  'STUDIO': { name: 'cube-outline', library: 'ionicons' },
+  'WAREHOUSE': { name: 'archive-outline', library: 'ionicons' },
 };
 
 // Hero slider data
@@ -62,8 +74,8 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState<(typeof cities)[number]>("Addis Ababa");
   const [locationDropdownVisible, setLocationDropdownVisible] = useState(false);
-  const [selectedSubCity, setSelectedSubCity] = useState<(typeof addisAbabaSubCities)[number]>("All");
-  const [subCityDropdownVisible, setSubCityDropdownVisible] = useState(false);
+  const [selectedSubCity, setSelectedSubCity] = useState<string>("All");
+  const [expandedCity, setExpandedCity] = useState<string | null>(null);
   const [heroIndex, setHeroIndex] = useState(0);
   const heroRef = useRef<FlatList>(null);
   const scrollInterval = useRef<NodeJS.Timeout | null>(null);
@@ -91,22 +103,27 @@ export default function HomeScreen() {
   }, []);
 
   const categories = useMemo(() => {
-    if (!allProperties || allProperties.length === 0) return ["All"];
-    const types = new Set(allProperties.map(p => p.propertyType.toUpperCase()).filter(Boolean));
-    return ["All", ...Array.from(types)];
-  }, [allProperties]);
+    // Fixed list as per design requirements + User request
+    return ["All", "House", "Apartment", "Office", "MarketPlace"];
+  }, []);
 
   const filteredProperties = useMemo(() => {
     let propertiesToFilter = allProperties || [];
     let cityFiltered = propertiesToFilter.filter(p => p.city === selectedCity);
 
-    if (selectedCity === "Addis Ababa" && selectedSubCity !== "All") {
+    if (selectedSubCity !== "All") {
       cityFiltered = cityFiltered.filter(p => p.subCity === selectedSubCity);
     }
 
     const categoryFiltered = (selectedCategory === "All" || selectedCategory === "ALL")
       ? cityFiltered
-      : cityFiltered.filter(p => p.propertyType.toUpperCase() === selectedCategory.toUpperCase());
+      : cityFiltered.filter(p => {
+        // Map UI category names to Property Types if they differ, or just use partial matching
+        const propType = p.propertyType.toUpperCase();
+        const selCat = selectedCategory.toUpperCase();
+        if (selCat === 'MARKETPLACE') return propType === 'RETAIL' || propType === 'MARKETPLACE';
+        return propType === selCat;
+      });
 
     if (!searchQuery.trim()) {
       return categoryFiltered;
@@ -136,34 +153,42 @@ export default function HomeScreen() {
       >
         <Image source={typeof imageUrl === 'string' ? { uri: imageUrl } : imageUrl} style={styles.cardImage} contentFit="cover" />
 
-        {/* Badge */}
-        <View style={styles.cardBadge}>
-          <Text style={styles.cardBadgeText}>{property.propertyType}</Text>
-        </View>
+        {/* Gradient Overlay for Text Visibility */}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.8)']}
+          style={styles.cardGradient}
+        />
 
-        {/* Favorite Button */}
+        {/* Badge - Top Right */}
+        <BlurView intensity={50} tint="light" style={styles.cardBadge}>
+          <Text style={styles.cardBadgeText}>{property.propertyType}</Text>
+        </BlurView>
+
+        {/* Favorite Button - Top Left */}
         <TouchableOpacity
           style={styles.cardSaveButton}
           onPress={(e) => { e.stopPropagation(); toggleSaved(property.id); }}
         >
           <Ionicons
             name={isSaved(property.id) ? "heart" : "heart-outline"}
-            size={20}
+            size={24}
             color={isSaved(property.id) ? "#FF3B30" : "#fff"}
           />
         </TouchableOpacity>
 
-        {/* Glass Effect Overlay */}
-        <BlurView intensity={30} tint="dark" style={styles.cardOverlay}>
+        {/* Bottom Content */}
+        <View style={styles.cardCheckContent}>
           <Text style={styles.cardTitle} numberOfLines={2}>{property.title}</Text>
           <View style={styles.cardLocationRow}>
             <Ionicons name="location-sharp" size={12} color="#fff" />
             <Text style={styles.cardLocationText} numberOfLines={1}>{property.location}</Text>
           </View>
-          <View style={styles.pricePill}>
-            <Text style={styles.cardPrice}>{Number(property.price).toLocaleString()} / month</Text>
-          </View>
-        </BlurView>
+
+          {/* Blurry Price Pill */}
+          <BlurView intensity={80} tint="dark" style={styles.pricePillBlur}>
+            <Text style={styles.cardPrice}>{Number(property.price).toLocaleString()}/month</Text>
+          </BlurView>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -242,6 +267,8 @@ export default function HomeScreen() {
           >
             {categories.map((category) => {
               const isActive = selectedCategory.toUpperCase() === category.toUpperCase();
+              const iconData = categoryIcons[category.toUpperCase()] || { name: 'ellipse', library: 'ionicons' };
+
               return (
                 <TouchableOpacity
                   key={category}
@@ -251,12 +278,14 @@ export default function HomeScreen() {
                   ]}
                   onPress={() => setSelectedCategory(category)}
                 >
-                  {getCategoryIcon(category)}
+                  <View style={[styles.categoryIconCircle, isActive ? styles.categoryIconCircleActive : styles.categoryIconCircleInactive]}>
+                    <Ionicons name={iconData.name as any} size={16} color={isActive ? '#fff' : '#000'} />
+                  </View>
                   <Text style={[
                     styles.categoryChipText,
                     isActive && styles.categoryChipTextActive
                   ]}>
-                    {category === 'ALL' ? 'All' : category.charAt(0).toUpperCase() + category.slice(1).toLowerCase()}
+                    {category}
                   </Text>
                 </TouchableOpacity>
               )
@@ -281,87 +310,83 @@ export default function HomeScreen() {
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      {/* City Selection Modal - Bottom Sheet Style */}
+      {/* City & Sub-City Cascading Dropdown */}
       <Modal
         visible={locationDropdownVisible}
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         onRequestClose={() => setLocationDropdownVisible(false)}
       >
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPressOut={() => setLocationDropdownVisible(false)}
+          onPressOut={() => {
+            setLocationDropdownVisible(false);
+            setExpandedCity(null); // Reset expansion on close
+          }}
         >
-          <View style={styles.bottomSheetContainer}>
-            <View style={styles.bottomSheetHandle} />
-            <Text style={styles.bottomSheetTitle}>Select City</Text>
-            <ScrollView style={styles.bottomSheetScroll}>
-              {cities.map((city) => (
-                <TouchableOpacity
-                  key={city}
-                  style={[styles.locationOption, selectedCity === city && styles.locationOptionSelected]}
-                  onPress={() => {
-                    setSelectedCity(city);
-                    setSelectedSubCity("All");
-                    setLocationDropdownVisible(false);
-                    // Check if city has subcities (mock logic: only Addis for now)
-                    if (city === "Addis Ababa") {
-                      setTimeout(() => setSubCityDropdownVisible(true), 300); // Wait for close animation
-                    }
-                  }}
-                >
-                  <Ionicons
-                    name="location"
-                    size={20}
-                    color={selectedCity === city ? "#000" : "#888"}
-                  />
-                  <Text style={[
-                    styles.locationOptionText,
-                    selectedCity === city && styles.locationOptionTextSelected
-                  ]}>{city}</Text>
-                  {selectedCity === city && <Ionicons name="checkmark" size={20} color="#000" style={{ marginLeft: 'auto' }} />}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+          {/* Popover Menu */}
+          <View style={[
+            styles.dropdownContainer,
+            (expandedCity !== null) && { width: 330 } // Expand only if city clicked
+          ]}>
+            <View style={styles.cascadingMenuWrapper}>
 
-      {/* Sub-City Selection Modal - Bottom Sheet Style */}
-      <Modal
-        visible={subCityDropdownVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setSubCityDropdownVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPressOut={() => setSubCityDropdownVisible(false)}
-        >
-          <View style={styles.bottomSheetContainer}>
-            <View style={styles.bottomSheetHandle} />
-            <Text style={styles.bottomSheetTitle}>Select Sub-City ({selectedCity})</Text>
-            <ScrollView style={styles.bottomSheetScroll}>
-              {/* 'All' option is already in the array, so we map straight through */}
-              {addisAbabaSubCities.map((subCity) => (
-                <TouchableOpacity
-                  key={subCity}
-                  style={[styles.locationOption, selectedSubCity === subCity && styles.locationOptionSelected]}
-                  onPress={() => {
-                    setSelectedSubCity(subCity);
-                    setSubCityDropdownVisible(false);
-                  }}
-                >
-                  <Text style={[
-                    styles.locationOptionText,
-                    selectedSubCity === subCity && styles.locationOptionTextSelected
-                  ]}>{subCity}</Text>
-                  {selectedSubCity === subCity && <Ionicons name="checkmark" size={20} color="#000" style={{ marginLeft: 'auto' }} />}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+              {/* Left Column: Cities */}
+              <View style={styles.cityColumn}>
+                <ScrollView style={styles.dropdownScroll} showsVerticalScrollIndicator={false}>
+                  {cities.map((city) => (
+                    <TouchableOpacity
+                      key={city}
+                      style={[styles.dropdownItem, selectedCity === city && styles.dropdownItemSelected]}
+                      onPress={() => {
+                        // Expand to show subcities
+                        setExpandedCity(city);
+                        setSelectedCity(city);
+                        // Default subcity reset if changing cities?
+                        if (selectedCity !== city) setSelectedSubCity("All");
+                      }}
+                    >
+                      <Text style={[
+                        styles.dropdownItemText,
+                        selectedCity === city && styles.dropdownItemTextSelected
+                      ]}>{city}</Text>
+                      {/* Show arrow if expanded, or just always arrow to indicate further options? */}
+                      <Ionicons name="chevron-forward" size={14} color="#ccc" />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Vertical Divider */}
+              <View style={styles.menuDivider} />
+
+              {/* Right Column: SubCities (Visible if Expanded) */}
+              {expandedCity && (
+                <View style={styles.subCityColumn}>
+                  <ScrollView style={styles.dropdownScroll} showsVerticalScrollIndicator={false}>
+                    {(citySubCities[expandedCity] || ["All"]).map((subCity) => (
+                      <TouchableOpacity
+                        key={subCity}
+                        style={[styles.dropdownItem, selectedSubCity === subCity && styles.dropdownItemSelected]}
+                        onPress={() => {
+                          setSelectedSubCity(subCity);
+                          setLocationDropdownVisible(false);
+                          setExpandedCity(null);
+                        }}
+                      >
+                        <Text style={[
+                          styles.dropdownItemText,
+                          selectedSubCity === subCity && styles.dropdownItemTextSelected
+                        ]}>{subCity}</Text>
+                        {selectedSubCity === subCity && <Ionicons name="checkmark" size={16} color="#000" />}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+            </View>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -549,19 +574,35 @@ const styles = StyleSheet.create({
   categoryChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F5F5F5",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 24,
+    backgroundColor: "#fff",
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    borderRadius: 30, // Pill shape
     marginRight: 10,
+    borderWidth: 0,
+    // Add subtle shadow or border if needed to separate from bg? Design shows plain pills on grey bg.
   },
   categoryChipActive: {
     backgroundColor: "#000",
+  },
+  categoryIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryIconCircleInactive: {
+    backgroundColor: '#E0E0E0',
+  },
+  categoryIconCircleActive: {
+    backgroundColor: '#333',
   },
   categoryChipText: {
     fontSize: 14,
     color: "#000",
     marginLeft: 8,
+    marginRight: 12, // Extra padding on right for text
     fontWeight: "600",
   },
   categoryChipTextActive: {
@@ -598,45 +639,49 @@ const styles = StyleSheet.create({
   },
   cardBadge: {
     position: "absolute",
-    top: 12,
-    right: 12,
-    backgroundColor: "rgba(255,255,255,0.3)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.4)",
+    top: 10,
+    right: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    overflow: "hidden",
+    // No explicit bg color needed as BlurView handles it, tint light creates the whitish glass look
   },
   cardBadgeText: {
     fontSize: 10,
-    color: "#fff",
+    color: "#000", // Dark text on light glass
     fontWeight: "700",
     textTransform: "capitalize",
   },
   cardSaveButton: {
     position: "absolute",
-    top: 12,
-    left: 12,
-    // No background, just icon as per some overlay designs, or faint bg
+    top: 10,
+    left: 10,
   },
 
-  // Glass Overlay
-  cardOverlay: {
-    position: "absolute",
-    bottom: 8,
-    left: 8,
-    right: 8,
-    borderRadius: 16,
-    overflow: "hidden",
-    padding: 10,
-    // Fallback for blur on Android if not working well:
-    backgroundColor: "rgba(30,30,30,0.6)",
+  cardGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '60%', // Covers bottom 60%
   },
+
+  cardCheckContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 12,
+  },
+
+  // Removed old cardOverlay style
+
   cardTitle: {
     fontSize: 14,
     fontWeight: "bold",
     color: "#fff",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   cardLocationRow: {
     flexDirection: "row",
@@ -646,16 +691,21 @@ const styles = StyleSheet.create({
   },
   cardLocationText: {
     fontSize: 11,
-    color: "#ddd",
+    color: "#e0e0e0",
     flex: 1,
   },
-  pricePill: {
-    backgroundColor: "rgba(0,0,0,0.5)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+
+  pricePillBlur: {
     alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginTop: 2,
   },
+
+  // Removed old pricePill
+
   cardPrice: {
     fontSize: 12,
     fontWeight: "bold",
@@ -679,70 +729,82 @@ const styles = StyleSheet.create({
 
   // Modals... (omitted detailed modal styles for brevity, assume they exist or use previous if needed, but here we should keep them basic)
   // Modals
+  // Modals
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end", // Align to bottom
+    backgroundColor: "transparent", // No dark overlay as per usual popover look, or faint
+    // We want to position content absolute, but to catch clicks we fill screen
   },
-  bottomSheetContainer: {
+  dropdownContainer: {
+    position: 'absolute',
+    top: 75, // Closer to header
+    left: 20,
+    width: 160, // Default single width
+    maxHeight: 400,
     backgroundColor: "#ffffff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: 40,
-    maxHeight: "70%",
-    width: "100%",
+    borderRadius: 12,
+    // paddingVertical: 8, // Moved padding to ScrollView or Columns to allow flush divider
+
+    // Shadow
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    borderWidth: 1,
+    borderColor: "#f0f0f0",
+    overflow: 'hidden', // rounded corners clip
   },
-  bottomSheetHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: "#ccc",
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 12,
-    marginBottom: 16,
+  cascadingMenuWrapper: {
+    flexDirection: 'row',
+    height: 320, // Fixed height for dropdown
   },
-  bottomSheetTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 16,
-    color: "#000",
+  cityColumn: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
-  bottomSheetScroll: {
-    paddingHorizontal: 20,
+  subCityColumn: {
+    flex: 1,
+    backgroundColor: '#fafafa',
+    borderLeftWidth: 1,
+    borderLeftColor: '#f0f0f0',
   },
-  locationDropdown: {
-    // Deprecated but kept to prevent breaks if used elsewhere
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 20,
-    width: width * 0.85,
-    maxHeight: "60%",
+  menuDivider: {
+    width: 0, // Handled by borderLeft
   },
-  dropdownTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 16,
-    textAlign: "center",
-    color: "#000000",
+  dropdownHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    marginBottom: 4,
+    gap: 10,
   },
-  locationOption: {
+  dropdownHeaderTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#888',
+  },
+  dropdownScroll: {
+    paddingHorizontal: 0, // List flush
+  },
+  dropdownItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 4,
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
-  locationOptionSelected: {
-    backgroundColor: "#F0F0F0",
+  dropdownItemSelected: {
+    backgroundColor: "#fafafa",
   },
-  locationOptionText: {
-    fontSize: 16,
-    color: "#666",
-    marginLeft: 12,
+  dropdownItemText: {
+    fontSize: 15,
+    color: "#333",
   },
-  locationOptionTextSelected: {
+  dropdownItemTextSelected: {
     color: "#000",
     fontWeight: "600",
   },

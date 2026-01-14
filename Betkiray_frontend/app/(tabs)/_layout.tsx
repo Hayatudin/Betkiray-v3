@@ -14,22 +14,23 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: "#000000",
-        tabBarInactiveTintColor: "#888888",
+        tabBarInactiveTintColor: "#666666",
         headerShown: false,
         tabBarStyle: {
           backgroundColor: "#ffffff",
-          borderTopWidth: 1,
-          borderTopColor: "#E0E0E0",
-          height: 80,
-          paddingBottom: 20,
+          borderTopWidth: 0, // Cleaner look without border or lighter
+          elevation: 10,
+          shadowColor: "#000",
+          shadowOpacity: 0.1,
+          shadowRadius: 10,
+          height: 70, // Slightly taller for floating button space
+          paddingBottom: 10,
           paddingTop: 10,
-          paddingHorizontal: 20,
         },
         tabBarLabelStyle: {
-          display: "none",
-        },
-        tabBarItemStyle: {
-          flex: 1,
+          fontSize: 10,
+          fontWeight: "600",
+          marginTop: -5,
         },
       }}
     >
@@ -49,10 +50,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="saved"
         options={{
-          title: "Saved",
+          title: "Favorite",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? "bookmark" : "bookmark-outline"}
+              name={focused ? "heart" : "heart-outline"}
               size={24}
               color={color}
             />
@@ -62,9 +63,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="add"
         options={{
-          title: "Add",
+          title: "",
+          tabBarLabel: () => null, // No label for center button
           tabBarIcon: ({ color }) => (
-            <Ionicons name="add" size={28} color="#ffffff" />
+            <Ionicons name="add" size={26} color="#ffffff" />
           ),
           tabBarButton: (props) => <CustomTabBarButton {...props} />,
         }}
@@ -72,10 +74,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="messages"
         options={{
-          title: "Messages",
+          title: "Chat",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? "chatbubble" : "chatbubble-outline"}
+              name={focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"}
               size={24}
               color={color}
             />
@@ -103,16 +105,21 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   customTabButton: {
-    top: -15,
+    top: 0, // No float
     justifyContent: "center",
     alignItems: "center",
   },
   customTabButtonInner: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#000000",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 8,
   },
 });
