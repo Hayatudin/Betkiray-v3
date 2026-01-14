@@ -115,7 +115,11 @@ export default function ProfileScreen() {
             <TouchableOpacity activeOpacity={1}>
               <View style={styles.modalHandle} /><Text style={styles.modalTitle}>Settings</Text>
               <View style={styles.settingsOptions}>
-                {user.role === 'ADMIN' && (<TouchableOpacity style={styles.settingItem} onPress={() => { hideSettings(); router.push('/(admin)'); }}><Ionicons name="shield-checkmark-outline" size={20} color="#007AFF" /><Text style={[styles.settingText, { color: "#007AFF" }]}>Admin Panel</Text><Ionicons name="chevron-forward" size={16} color="#888888" /></TouchableOpacity>)}
+                <TouchableOpacity style={styles.settingItem} onPress={() => { hideSettings(); router.push('/(admin)/dashboard'); }}>
+                  <Ionicons name="shield-checkmark-outline" size={20} color="#007AFF" />
+                  <Text style={[styles.settingText, { color: "#007AFF" }]}>Admin Panel</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#888888" />
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.settingItem} onPress={() => { hideSettings(); router.push('/profile/edit'); }}><Ionicons name="person-outline" size={20} color="#000000" /><Text style={styles.settingText}>Edit Profile</Text><Ionicons name="chevron-forward" size={16} color="#888888" /></TouchableOpacity>
                 <TouchableOpacity style={[styles.settingItem, styles.logoutItem]} onPress={handleLogout}><Ionicons name="log-out-outline" size={20} color="#FF3B30" /><Text style={[styles.settingText, styles.logoutText]}>Logout</Text></TouchableOpacity>
               </View>

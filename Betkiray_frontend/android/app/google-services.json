@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "545035439752",
+    "project_id": "betkiray-abac1",
+    "storage_bucket": "betkiray-abac1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:545035439752:android:a4fe2aea094a9cc21fd93d",
+        "android_client_info": {
+          "package_name": "com.betkiray.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBbw-YlgqP77mMalhgTw0Ti_bXuf1IU82I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

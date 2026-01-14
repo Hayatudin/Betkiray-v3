@@ -79,12 +79,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithEmail = async (data: any) => {
+    // By passing mock flag in API config, this call now goes through the mock adapter
     const response = await api.post<AuthResponse>('/auth/email/login', data);
     await handleAuthSuccess(response.data);
   };
-  
+
   const signUpWithEmail = async (data: any) => {
     try {
+      // Mock signup just logs in immediately with mock user
+      if (api.defaults.adapter) { // Check if we are mocking
+        await signInWithEmail({ email: data.email, password: data.password });
+        return;
+      }
+
       await api.post('/auth/email/register', data);
       await signInWithEmail({ email: data.email, password: data.password });
     } catch (error: any) {
@@ -92,7 +99,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       throw error;
     }
   };
-  
+
   const signInWithGoogle = async (idToken: string) => {
     try {
       const response = await api.post<AuthResponse>('/auth/google/login', { id_token: idToken });

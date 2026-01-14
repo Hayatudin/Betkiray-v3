@@ -32,8 +32,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   >({
     "Addis Ababa": [],
     Jimma: [],
-    Lagos: [],
-  });
+  } as unknown as Record<City, Property[]>);
   const [savedProperties, setSavedProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,12 +53,16 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       const allProps: Property[] = response.data;
 
       const processedProps = allProps.map((prop) => {
-        const imageUrl = prop.media?.find((m) => m.mediaType === "IMAGE")
-          ?.mediaUrl
-          ? `${API_BASE_URL}${
-              prop.media.find((m) => m.mediaType === "IMAGE")?.mediaUrl
+        let imageUrl = prop.image;
+
+        // If no direct image, try to get from media
+        if (!imageUrl) {
+          imageUrl = prop.media?.find((m) => m.mediaType === "IMAGE")
+            ?.mediaUrl
+            ? `${API_BASE_URL}${prop.media.find((m) => m.mediaType === "IMAGE")?.mediaUrl
             }`
-          : "";
+            : "";
+        }
 
         const location = [prop.address, prop.subCity, prop.city]
           .filter(Boolean)
@@ -89,12 +92,16 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       const response = await api.get("/saved");
       const saved = response.data.map((item: any) => {
         const prop = item.property;
-        const imageUrl = prop.media?.find((m: any) => m.mediaType === "IMAGE")
-          ?.mediaUrl
-          ? `${API_BASE_URL}${
-              prop.media.find((m: any) => m.mediaType === "IMAGE").mediaUrl
+
+        let imageUrl = prop.image;
+        if (!imageUrl) {
+          imageUrl = prop.media?.find((m: any) => m.mediaType === "IMAGE")
+            ?.mediaUrl
+            ? `${API_BASE_URL}${prop.media.find((m: any) => m.mediaType === "IMAGE").mediaUrl
             }`
-          : "";
+            : "";
+        }
+
         const location = [prop.address, prop.subCity, prop.city]
           .filter(Boolean)
           .join(", ");
