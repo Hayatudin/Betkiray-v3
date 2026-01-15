@@ -251,8 +251,8 @@ export default function AddScreen() {
 
   const StepHeader = ({ step }: { step: number }) => (
     <View style={styles.headerContainer}>
-      <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
-        <Ionicons name="close" size={24} color="#000" />
+      <TouchableOpacity style={styles.closeBtn} onPress={() => step > 1 ? goBack() : router.back()}>
+        <Ionicons name={step > 1 ? "arrow-back" : "close"} size={24} color="#000" />
       </TouchableOpacity>
 
       <View style={styles.progressContainer}>
@@ -336,33 +336,181 @@ export default function AddScreen() {
 
         {step === 2 && (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>Property Details</Text>
-            <View style={styles.formGroup}><Text style={styles.label}>Property Title *</Text><TextInput placeholder="e.g., Cozy Downtown Apartment" value={title} onChangeText={setTitle} style={[styles.input, !title.trim() && styles.inputError]} /></View>
-            <View style={styles.formGroup}><Text style={styles.label}>Description *</Text><TextInput placeholder="Describe your property..." value={description} onChangeText={setDescription} style={[styles.input, styles.textArea, !description.trim() && styles.inputError]} multiline maxLength={500} /><Text style={styles.charCount}>{description.length}/500</Text></View>
-            <View style={styles.formGroup}><Text style={styles.label}>Contact Phone Number *</Text><TextInput placeholder="+251 91 123 4567" value={phone} onChangeText={setPhone} style={[styles.input, !phone.trim() && styles.inputError]} keyboardType="phone-pad" /></View>
-            <View style={styles.formGroup}><Text style={styles.label}>Area (m²)</Text><TextInput placeholder="e.g., 85" value={areaSqm} onChangeText={setAreaSqm} style={styles.input} keyboardType="numeric" /></View>
-            <Text style={[styles.label, { marginTop: 16 }]}>Property Type</Text>
-            <View style={styles.typeGrid}>{(["House", "Apartment", "Office", "Retail", "Studio", "Warehouse"] as const).map((t) => <TouchableOpacity key={t} style={[styles.typeChip, type === t && styles.typeChipActive]} onPress={() => setType(t)}><Ionicons name={t === "House" ? "home" : "business"} size={18} color={type === t ? "#fff" : "#555"} /><Text style={[styles.typeChipText, type === t && styles.typeChipTextActive]}>{t}</Text></TouchableOpacity>)}</View>
-            <View style={styles.counterRow}><View style={styles.counterBox}><Text style={styles.counterLabel}>Rooms</Text><View style={styles.counterControls}><TouchableOpacity style={styles.counterBtn} onPress={() => setRooms((v) => Math.max(1, v - 1))}><Ionicons name="remove" size={18} color="#000" /></TouchableOpacity><Text style={styles.counterValue}>{rooms}</Text><TouchableOpacity style={styles.counterBtn} onPress={() => setRooms((v) => v + 1)}><Ionicons name="add" size={18} color="#000" /></TouchableOpacity></View></View><View style={styles.counterBox}><Text style={styles.counterLabel}>Bathrooms</Text><View style={styles.counterControls}><TouchableOpacity style={styles.counterBtn} onPress={() => setBaths((v) => Math.max(0, v - 1))}><Ionicons name="remove" size={18} color="#000" /></TouchableOpacity><Text style={styles.counterValue}>{baths}</Text><TouchableOpacity style={styles.counterBtn} onPress={() => setBaths((v) => v + 1)}><Ionicons name="add" size={18} color="#000" /></TouchableOpacity></View></View></View>
-            <View style={styles.furnishedCard}><View style={{ flex: 1 }}><Text style={styles.inlineTitle}>Furnished</Text><Text style={styles.inlineSubtitle}>Is it furnished?</Text></View><Switch value={furnished} onValueChange={setFurnished} trackColor={{ false: "#E0E6EF", true: "#22A06B" }} thumbColor={"#fff"} /></View>
-            <View style={styles.navRow}><TouchableOpacity style={styles.backButton} onPress={goBack}><Ionicons name="arrow-back" size={18} color="#000" /><Text style={styles.backText}>Back</Text></TouchableOpacity></View>
+            {/* Title */}
+            <View style={styles.cardContainer}>
+              <Text style={styles.labelLight}>Property Title</Text>
+              <TextInput
+                placeholder="Enter property title"
+                placeholderTextColor="#A0A0A0"
+                value={title}
+                onChangeText={setTitle}
+                style={styles.inputClean}
+              />
+            </View>
+
+            {/* Description */}
+            <View style={[styles.cardContainer, { marginTop: 12, height: 140 }]}>
+              <Text style={styles.labelLight}>Description</Text>
+              <TextInput
+                placeholder="Tell us about you property..."
+                placeholderTextColor="#A0A0A0"
+                value={description}
+                onChangeText={setDescription}
+                style={[styles.inputClean, { height: '80%', textAlignVertical: 'top' }]}
+                multiline
+                maxLength={500}
+              />
+            </View>
+
+            {/* Voice Input */}
+            <TouchableOpacity style={styles.voiceButton} onPress={isRecording ? stopRecording : startRecording}>
+              {isRecording ? (
+                <View style={styles.voiceContent}>
+                  <ActivityIndicator size="small" color="#FF5C5C" />
+                  <Text style={[styles.voiceText, { color: '#FF5C5C' }]}>Recording... Tap to stop</Text>
+                </View>
+              ) : (
+                <View style={styles.voiceContent}>
+                  <Ionicons name="mic-outline" size={20} color="#A0A0A0" />
+                  <Text style={styles.voiceText}>Tap to add description by voice</Text>
+                  <Ionicons name="cellular-outline" size={20} color="#E0E0E0" />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Property Type */}
+            <View style={styles.cardContainer}>
+              <Text style={styles.sectionHeader}>Preperty Type</Text>
+              <View style={styles.typeRow}>
+                {(["House", "Apartment", "Office", "MarketPlace"] as const).map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[
+                      styles.typeChipClean,
+                      type === t || (t === "MarketPlace" && type === "Retail") ? styles.typeChipActiveClean : null
+                    ]}
+                    onPress={() => setType(t === "MarketPlace" ? "Retail" : t as any)}
+                  >
+                    <Text style={[
+                      styles.typeChipTextClean,
+                      type === t || (t === "MarketPlace" && type === "Retail") ? styles.typeChipTextActiveClean : null
+                    ]}>
+                      {t}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Rooms */}
+            <View style={styles.cardContainer}>
+              <Text style={styles.sectionHeader}>Rooms</Text>
+
+              <View style={styles.roomRow}>
+                <Text style={styles.roomLabel}>Bedrooms</Text>
+                <View style={styles.counterWrapper}>
+                  <TouchableOpacity style={styles.counterBtnSmall} onPress={() => setRooms(v => Math.max(1, v - 1))}>
+                    <Ionicons name="remove" size={16} color="#000" />
+                  </TouchableOpacity>
+                  <Text style={styles.counterValSmall}>{rooms}</Text>
+                  <TouchableOpacity style={styles.counterBtnSmall} onPress={() => setRooms(v => v + 1)}>
+                    <Ionicons name="add" size={16} color="#000" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.roomRow}>
+                <Text style={styles.roomLabel}>Bathrooms</Text>
+                <View style={styles.counterWrapper}>
+                  <TouchableOpacity style={styles.counterBtnSmall} onPress={() => setBaths(v => Math.max(0, v - 1))}>
+                    <Ionicons name="remove" size={16} color="#000" />
+                  </TouchableOpacity>
+                  <Text style={styles.counterValSmall}>{baths}</Text>
+                  <TouchableOpacity style={styles.counterBtnSmall} onPress={() => setBaths(v => v + 1)}>
+                    <Ionicons name="add" size={16} color="#000" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Furnished */}
+            <View style={styles.furnishedContainer}>
+              <Text style={styles.sectionHeader}>Furnished</Text>
+              <Switch
+                value={furnished}
+                onValueChange={setFurnished}
+                trackColor={{ false: "#E0E0E0", true: "#000" }}
+                thumbColor={"#fff"}
+              />
+            </View>
+
           </View>
         )}
 
         {step === 3 && (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>Price & Fees</Text>
-            <View style={styles.formGroup}><Text style={styles.label}>Rental Price Per month</Text><View style={styles.priceInputRow}><Text style={styles.currency}>$</Text><TextInput keyboardType="numeric" placeholder="0" value={price} onChangeText={setPrice} style={[styles.input, { flex: 1, marginLeft: 8 }]} /></View></View>
-            <View style={[styles.noticeRow, { backgroundColor: "#FFF6E5" }]}><Ionicons name="hand-left" size={18} color="#F5A524" /><View style={{ flex: 1 }}><Text style={styles.noticeTitle}>Negotiable</Text><Text style={styles.noticeSub}>Open to price discussions</Text></View><Switch value={negotiable} onValueChange={setNegotiable} /></View>
-            <View style={[styles.noticeRow, { backgroundColor: "#EFFFF6" }]}><Ionicons name="flash" size={18} color="#16C47F" /><View style={{ flex: 1 }}><Text style={styles.noticeTitle}>Include Utilities</Text><Text style={styles.noticeSub}>Water, electricity, etc.</Text></View><Switch value={includeUtilities} onValueChange={setIncludeUtilities} /></View>
-            <View style={styles.summaryBox}><Text style={styles.summaryLeft}>Your listing price:</Text><Text style={styles.summaryRight}>${price || 0} / month</Text></View>
-            <View style={styles.navRow}><TouchableOpacity style={styles.backButton} onPress={goBack}><Ionicons name="arrow-back" size={18} color="#000" /><Text style={styles.backText}>Back</Text></TouchableOpacity></View>
+            {/* Price Card */}
+            <View style={styles.inputCard}>
+              <Text style={styles.cardLabel}>Listing Price</Text>
+              <View style={styles.priceRow}>
+                <TextInput
+                  placeholder="Enter property Price"
+                  placeholderTextColor="#C7C7CC"
+                  value={price}
+                  onChangeText={setPrice}
+                  keyboardType="numeric"
+                  style={styles.priceInput}
+                />
+                <Text style={styles.priceSuffix}>/month</Text>
+              </View>
+              <View style={styles.inputUnderline} />
+            </View>
+
+            {/* Negotiable Card */}
+            <View style={styles.toggleCard}>
+              <Text style={styles.toggleLabel}>Negotiable</Text>
+              <Switch
+                value={negotiable}
+                onValueChange={setNegotiable}
+                trackColor={{ false: "#E9E9EA", true: "#000" }}
+                thumbColor={"#fff"}
+                ios_backgroundColor="#E9E9EA"
+              />
+            </View>
+
+            {/* Utilities Card */}
+            <View style={styles.toggleCard}>
+              <Text style={styles.toggleLabel}>Include Utilities</Text>
+              <Switch
+                value={includeUtilities}
+                onValueChange={setIncludeUtilities}
+                trackColor={{ false: "#E9E9EA", true: "#000" }}
+                thumbColor={"#fff"}
+                ios_backgroundColor="#E9E9EA"
+              />
+            </View>
+
+            {/* Service Fee Card */}
+            <View style={styles.toggleCard}>
+              <Text style={[styles.toggleLabel, { color: '#8E8E93', fontWeight: '400' }]}>Listing Service Fee(10%)</Text>
+              <Text style={[styles.toggleLabel, { color: '#8E8E93', fontWeight: '400' }]}>
+                {Math.round((Number(price) || 0) * 0.1)}
+              </Text>
+            </View>
           </View>
         )}
 
         {step === 4 && (
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Location & Contact</Text>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Contact Phone Number *</Text>
+              <TextInput placeholder="+251 91 123 4567" value={phone} onChangeText={setPhone} style={[styles.input, !phone.trim() && styles.inputError]} keyboardType="phone-pad" />
+            </View>
+
             <Text style={[styles.label, { marginTop: 8 }]}>Property Location</Text>
 
             <View style={styles.locationCard}>
@@ -488,8 +636,8 @@ export default function AddScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { backgroundColor: "#fff", zIndex: 10 },
-  headerContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 10, backgroundColor: '#fff' },
+  safeArea: { backgroundColor: "#F7F7F9", zIndex: 10 },
+  headerContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 10, backgroundColor: '#F7F7F9' },
   closeBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#fff", justifyContent: 'center', alignItems: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
   progressContainer: { alignItems: 'center', flex: 1 },
   stepIndicator: { fontSize: 13, color: '#666', marginBottom: 8, fontWeight: '500' },
@@ -588,7 +736,40 @@ const styles = StyleSheet.create({
   locationButtonDisabled: { backgroundColor: '#FFB8B8' },
   locationButtonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   hint: { color: "#9CA3AF", textAlign: 'center', fontSize: 12, marginTop: 8 },
-  keyboardContainer: { flex: 1, backgroundColor: "#ffffff" },
-  container: { flex: 1, backgroundColor: "#ffffff" },
+  keyboardContainer: { flex: 1, backgroundColor: "#F7F7F9" },
+  container: { flex: 1, backgroundColor: "#F7F7F9" },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 100 },
+
+  // New Styles for Step 2
+  cardContainer: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.02, shadowRadius: 2, elevation: 1 },
+  labelLight: { color: "#8E8E93", fontSize: 13, fontWeight: "500", marginBottom: 8 },
+  inputClean: { fontSize: 16, color: '#000', padding: 0 },
+  voiceButton: { backgroundColor: '#fff', borderRadius: 30, paddingVertical: 14, marginBottom: 16, alignItems: 'center', justifyContent: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 2, elevation: 1 },
+  voiceContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  voiceText: { color: '#8E8E93', fontSize: 14, fontWeight: "500" },
+  sectionHeader: { fontSize: 16, fontWeight: "700", color: "#000", marginBottom: 12 },
+  typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  typeChipClean: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#F5F5F5' },
+  typeChipActiveClean: { backgroundColor: '#000' },
+  typeChipTextClean: { fontSize: 14, color: '#000', fontWeight: '500' },
+  typeChipTextActiveClean: { color: '#fff' },
+  roomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  roomLabel: { fontSize: 16, color: '#1C1C1E', fontWeight: '500' },
+  counterWrapper: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  counterBtnSmall: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#F5F5F5', alignItems: 'center', justifyContent: 'center' },
+  counterValSmall: { fontSize: 16, fontWeight: '600', color: '#000', minWidth: 20, textAlign: 'center' },
+  divider: { height: 1, backgroundColor: '#F0F0F0', marginVertical: 4 },
+  furnishedContainer: { backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.02, shadowRadius: 2, elevation: 1 },
+
+  // New Styles for Step 3
+  inputCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.02, shadowRadius: 2, elevation: 1 },
+  // cardLabel reused or similar to labelLight
+  cardLabel: { color: "#8E8E93", fontSize: 13, fontWeight: "600", marginBottom: 12 },
+  priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  priceInput: { flex: 1, fontSize: 17, color: '#000', padding: 0 },
+  priceSuffix: { fontSize: 15, color: '#8E8E93', marginLeft: 8 },
+  inputUnderline: { height: 1, backgroundColor: '#E5E5EA', marginTop: 12 },
+
+  toggleCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.02, shadowRadius: 2, elevation: 1 },
+  toggleLabel: { fontSize: 17, fontWeight: '600', color: '#000' },
 });
