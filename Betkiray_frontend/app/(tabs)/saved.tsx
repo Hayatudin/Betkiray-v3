@@ -2,200 +2,207 @@ import { useAppState } from "@/contexts/AppStateContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
-  ScrollView,
+  Dimensions,
+  FlatList,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  StatusBar,
 } from "react-native";
-import api from "@/config/api"; // Import api config for the base URL
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import api from "@/config/api";
+
+const { width } = Dimensions.get("window");
+const COLUMN_count = 2;
+const CARD_GAP = 12;
+const CARD_WIDTH = (width - 40 - (CARD_GAP * (COLUMN_count - 1))) / COLUMN_count;
+
+const CATEGORIES = ["All", "House", "Apartment", "Office"];
 
 export default function SavedScreen() {
-  // --- CHANGE: Consume savedProperties directly, no more filtering ---
   const { savedProperties, toggleSaved } = useAppState();
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const API_BASE_URL = api.defaults.baseURL;
+
+  const filteredProperties = savedProperties.filter((p) => {
+    if (selectedCategory === "All") return true;
+    return p.propertyType?.toUpperCase() === selectedCategory.toUpperCase();
+  });
+
+  const getImageUrl = (imageVal: string | number | undefined) => {
+    if (typeof imageVal === 'number') return imageVal;
+    if (typeof imageVal === 'string' && imageVal.startsWith('http')) return { uri: imageVal };
+    if (typeof imageVal === 'string') return { uri: `http://10.0.2.2:3000${imageVal}` }; // Fallback for relative
+    return { uri: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" };
+  };
+
+  const renderItem = ({ item }: { item: any }) => {
+    const imageUrl = getImageUrl(item.image || item.media?.[0]?.mediaUrl);
+
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.9}
+        onPress={() => router.push(`/property/${item.id}`)}
+      >
+        <Image source={imageUrl} style={styles.cardImage} contentFit="cover" transition={500} />
+
+        {/* Gradient Overlay */}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.8)']}
+          style={styles.cardGradient}
+        />
+
+        {/* Top Badges */}
+        <View style={styles.cardHeader}>
+          <TouchableOpacity style={styles.heartButton} onPress={() => toggleSaved(item.id)}>
+            <Ionicons name="heart" size={18} color="#FF3B30" />
+          </TouchableOpacity>
+
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryText}>{item.propertyType || "Apartment"}</Text>
+          </View>
+        </View>
+
+        {/* Bottom Content */}
+        <View style={styles.cardContent}>
+          <View style={styles.pricePill}>
+            <Text style={styles.priceText}>{Number(item.price).toLocaleString()}/month</Text>
+          </View>
+          <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={12} color="#ddd" />
+            <Text style={styles.locationText} numberOfLines={1}>{item.location}</Text>
+          </View>
+        </View>
+
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Saved Properties</Text>
+        <Text style={styles.headerTitle}>Favorites</Text>
       </View>
+
+      {/* Category Filter */}
+      <View style={styles.categoryContainer}>
+        <FlatList
+          horizontal
+          data={CATEGORIES}
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item}
+          contentContainerStyle={{ paddingHorizontal: 20 }}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[styles.categoryChip, selectedCategory === item && styles.categoryChipActive]}
+              onPress={() => setSelectedCategory(item)}
+            >
+              {/* Icon mapping could appear here */}
+              {item === "All" && <Ionicons name="grid-outline" size={16} color={selectedCategory === item ? "#fff" : "#000"} style={{ marginRight: 6 }} />}
+              {item === "House" && <Ionicons name="home-outline" size={16} color={selectedCategory === item ? "#fff" : "#000"} style={{ marginRight: 6 }} />}
+              {item === "Apartment" && <Ionicons name="business-outline" size={16} color={selectedCategory === item ? "#fff" : "#000"} style={{ marginRight: 6 }} />}
+              {item === "Office" && <Ionicons name="briefcase-outline" size={16} color={selectedCategory === item ? "#fff" : "#000"} style={{ marginRight: 6 }} />}
+
+              <Text style={[styles.chipText, selectedCategory === item && styles.chipTextActive]}>{item}</Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
+
+      {/* Favorites Grid */}
       {savedProperties.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="bookmark-outline" size={48} color="#888888" />
-          <Text style={styles.emptyText}>No saved properties yet</Text>
+          <Ionicons name="heart-dislike-outline" size={64} color="#ccc" />
+          <Text style={styles.emptyText}>No favorites yet.</Text>
         </View>
       ) : (
-        <ScrollView
-          contentContainerStyle={styles.list}
+        <FlatList
+          data={filteredProperties}
+          renderItem={renderItem}
+          keyExtractor={item => item.id.toString()}
+          numColumns={COLUMN_count}
+          columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 20 }}
+          contentContainerStyle={{ paddingTop: 10, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
-        >
-          {savedProperties.map((p) => (
-            <TouchableOpacity
-              key={p.id}
-              style={styles.card}
-              onPress={() => router.push(`/property/${p.id}`)}
-            >
-              {/* --- CHANGE: Correctly construct the image URL --- */}
-              <Image
-                source={{ uri: `${API_BASE_URL}${p.media?.[0]?.mediaUrl}` }}
-                style={styles.image}
-                contentFit="cover"
-              />
-              <View style={styles.info}>
-                <Text style={styles.title}>{p.title}</Text>
-                <View style={styles.locationRow}>
-                  <Ionicons name="location-outline" size={14} color="#FF3B30" />
-                  <Text style={styles.location}>{p.location}</Text>
-                </View>
-                <View style={styles.detailsRow}>
-                  <View style={styles.detailItem}>
-                    <Ionicons name="bed-outline" size={14} color="#888888" />
-                    {/* --- CHANGE: Use correct field names from API --- */}
-                    <Text style={styles.detailText}>{p.bedrooms} beds</Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Ionicons name="resize-outline" size={14} color="#888888" />
-                    <Text style={styles.detailText}>{p.areaSqm} m²</Text>
-                  </View>
-                </View>
-                <View style={styles.row}>
-                  <Text style={styles.price}>${p.price}</Text>
-                  <Text style={styles.period}>/ {p.billingPeriod.toLowerCase()}</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={styles.unbookmark}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  toggleSaved(p.id);
-                }}
-              >
-                <Ionicons name="bookmark" size={20} color="#FF3B30" />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
-          <View style={styles.bottomSpacing} />
-        </ScrollView>
+        />
       )}
+
     </View>
   );
 }
 
-// --- UPDATED STYLES ---
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8F9FA",
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
   header: {
-    backgroundColor: '#ffffff',
-    paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingTop: 50, paddingHorizontal: 20, paddingBottom: 10, backgroundColor: "#fff"
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+  headerTitle: { fontSize: 28, fontWeight: 'bold' },
+
+  categoryContainer: {
+    height: 60, marginTop: 10
   },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+  categoryChip: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#f2f2f2',
+    paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 12,
+    marginRight: 10
   },
-  emptyText: {
-    marginTop: 12,
-    color: "#888888",
-    fontSize: 16,
+  categoryChipActive: {
+    backgroundColor: '#000'
   },
-  list: {
-    padding: 20,
-    paddingBottom: 100,
-  },
+  chipText: { fontSize: 14, fontWeight: '600', color: '#000' },
+  chipTextActive: { color: '#fff' },
+
   card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    overflow: "hidden",
-    position: "relative",
-  },
-  image: {
-    height: 200,
-    width: "100%",
-  },
-  info: {
-    padding: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000000",
-    marginBottom: 8,
-  },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  location: {
-    fontSize: 14,
-    color: "#888888",
-    marginLeft: 4,
-  },
-  detailsRow: {
-    flexDirection: "row",
-    marginBottom: 12,
-  },
-  detailItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 20,
-  },
-  detailText: {
-    fontSize: 14,
-    color: "#888888",
-    marginLeft: 4,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-  },
-  price: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#000000",
-  },
-  period: {
-    fontSize: 14,
-    color: "#888888",
-  },
-  unbookmark: {
-    position: "absolute",
-    right: 12,
-    top: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    width: CARD_WIDTH,
+    height: 240,
     borderRadius: 20,
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#f0f0f0',
+    marginBottom: 20,
+    overflow: 'hidden'
   },
-  bottomSpacing: {
-    height: 20,
+  cardImage: { width: '100%', height: '100%' },
+  cardGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%' },
+
+  cardHeader: {
+    position: 'absolute', top: 12, left: 12, right: 12,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start'
   },
+  heartButton: {
+    width: 32, height: 32, borderRadius: 16, backgroundColor: '#fff',
+    justifyContent: 'center', alignItems: 'center',
+    shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 4, elevation: 3
+  },
+  categoryBadge: {
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.3)', // Glassy look
+    overflow: 'hidden'
+  },
+  categoryText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+
+  cardContent: {
+    position: 'absolute', bottom: 12, left: 12, right: 12
+  },
+  pricePill: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, marginBottom: 6,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
+  },
+  priceText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  cardTitle: { color: '#fff', fontWeight: 'bold', fontSize: 14, marginBottom: 2 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  locationText: { color: '#ddd', fontSize: 10 },
+
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { color: '#888', marginTop: 10, fontSize: 16 }
 });
